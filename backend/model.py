@@ -15,7 +15,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # Load dataset
-movies = pd.read_csv('./data/tmdb_5000_movies.csv')
+movies = pd.read_csv('./data/10000 Movies Data')
 
 # Remove rows with null overviews
 movies = movies[movies['overview'].notnull()].copy()
@@ -28,7 +28,7 @@ def extract_genres(x):
     except:
         return []
 
-movies['genres'] = movies['genres'].apply(extract_genres)
+movies['Genres'] = movies['Genres'].apply(extract_genres)
 
 # Combine fields for content-based filtering
 movies['combined'] = movies['overview']
@@ -97,7 +97,7 @@ def recommend_movies_by_mood(mood, user_history_titles=None, top_n=10, alpha=0.4
         if row['title'].lower() in user_history_titles_lower:
             continue
 
-        genres = row['genres']
+        genres = row['Genres']
 
         # 1. Mood Score
         mood_score = sum([genre_weights.get(g, 0) for g in genres])
@@ -113,7 +113,7 @@ def recommend_movies_by_mood(mood, user_history_titles=None, top_n=10, alpha=0.4
         scores.append((row['title'], final, genres))
 
     scores.sort(key=lambda x: x[1], reverse=True)
-    return pd.DataFrame(scores[:top_n], columns=['title', 'score', 'genres'])
+    return pd.DataFrame(scores[:top_n], columns=['title', 'score', 'Genres'])
 
 recommend_movies_by_mood(
     mood='happy',
@@ -175,27 +175,53 @@ def join_blend_code(code, user_history, user_id="User2"):
         "recommendations": recs
     }
 
-def recommend_blend(user_histories, top_n=10, alpha=0.5, beta=0.5):
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+def recommend_blend(user_histories, top_n=10, alpha=0.9, beta=0.1):
     """
-    user_histories: List of lists, each containing movie titles watched by a user
-    Generates recommendations based on combined user interests (not just intersection)
+    Recommends movies for a group blend session using a combination of cosine similarity
+    (from TF-IDF vectors of watched movies) and normalized rating scores.
+
+    Parameters:
+        user_histories (List[List[str]]): List of lists, each with movie titles watched by a user.
+        top_n (int): Number of top recommendations to return.
+        alpha (float): Weight for similarity score.
+        beta (float): Weight for rating score.
+
+    Returns:
+        dict: {
+            "blend_recommendations": List of recommended movies,
+            "overall_match_score": Percentage match score across top_n movies
+        }
     """
     if not user_histories or not all(user_histories):
         return []
 
-    # Normalize user history
-    cleaned_histories = [set(title.lower() for title in history if title.strip()) for history in user_histories]
+    # Normalize user history (lowercase & deduplicate)
+    cleaned_histories = [set(title.lower().strip() for title in history if title.strip()) for history in user_histories]
     all_titles = set.union(*cleaned_histories)
 
     if not all_titles:
         return []
 
+    # Get indices of the watched movies
     indices = movies[movies['title'].str.lower().isin(all_titles)].index.tolist()
     if not indices:
         return []
 
+    # Build blend profile vector from TF-IDF matrix
     profile_vector = np.mean(tfidf_matrix[indices], axis=0).A1
     user_sim = cosine_similarity([profile_vector], tfidf_matrix).flatten()
+
+    # Normalize rating (if not already)
+    if 'weighted_rating_norm' not in movies.columns:
+        min_rating = movies['weighted_rating'].min()
+        max_rating = movies['weighted_rating'].max()
+        if max_rating != min_rating:
+            movies['weighted_rating_norm'] = (movies['weighted_rating'] - min_rating) / (max_rating - min_rating)
+        else:
+            movies['weighted_rating_norm'] = 0.5  # fallback default
 
     scores = []
 
@@ -205,18 +231,18 @@ def recommend_blend(user_histories, top_n=10, alpha=0.5, beta=0.5):
             continue
 
         sim_score = user_sim[idx]
-        rating_score = row['weighted_rating_norm']
+        rating_score = row.get('weighted_rating_norm', 0.5)  # fallback if missing
         match_score = alpha * sim_score + beta * rating_score
 
         scores.append({
             "title": row['title'],
-            "genres": row['genres'],
+            "genres": row['Genres'],
             "match_score": round(match_score, 4)
         })
 
+    # Sort and return top recommendations
     scores.sort(key=lambda x: x['match_score'], reverse=True)
 
-    # Overall match score for blend
     overall_match_raw = np.mean([x['match_score'] for x in scores[:top_n]]) if scores else 0.0
     overall_match_percent = round(overall_match_raw * 100, 2)
 
@@ -270,9 +296,9 @@ def get_genre_tag(user_watched_genres):
 # --- Part 2: Load Movie Data and Create Title-to-Genre Mapping ---
 
 try:
-    movies_df = pd.read_csv('./data/tmdb_5000_movies.csv')
+    movies_df = pd.read_csv('./data/10000 Movies Data')
 except FileNotFoundError:
-    print("Error: 'tmdb_5000_movies.csv' not found. Please ensure the file is in the correct directory.")
+    print("Error: '10000 Movies Data' not found. Please ensure the file is in the correct directory.")
     exit()
 
 def extract_genres_from_string(genres_str):
@@ -283,7 +309,7 @@ def extract_genres_from_string(genres_str):
             return []
     return []
 
-movies_df['parsed_genres'] = movies_df['genres'].apply(extract_genres_from_string)
+movies_df['parsed_genres'] = movies_df['Genres'].apply(extract_genres_from_string)
 
 movie_title_to_genres = {}
 for index, row in movies_df.iterrows():

@@ -2,21 +2,11 @@
 
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Home,
-  Bookmark,
-  Users,
   Search,
-  User,
-  Play,
-  Plus,
-  Zap,
   FlameIcon as Fire,
 } from "lucide-react";
-import Image from "next/image";
 import Hero from "./Hero";
 import MoodSelector from "./MoodSelector";
 import RecentlyWatchedSection from "./RecentlyWatchedSection";

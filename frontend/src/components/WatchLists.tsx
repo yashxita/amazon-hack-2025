@@ -7,7 +7,7 @@ import {
   Plus,
   Zap,
 } from "lucide-react";
-import Image from "next/image";
+
 export default function Watchlist(){
     return(
         <div className="pt-16 px-6 lg:px-12">
