@@ -1,42 +1,7 @@
-
 "use client";
-
-import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import {
-  Home,
-  Bookmark,
-  Users,
-  Search,
-  User,
-  Play,
-  Plus,
-  Star,
-  Heart,
-  Smile,
-  Zap,
-  Coffee,
-  Moon,
-  ChevronLeft,
-  ChevronRight,
-  Volume2,
-  Info,
-  ThumbsUp,
-  Share2,
-  Clock,
-  Calendar,
-  TrendingUp,
-  FlameIcon as Fire,
-  Award,
-} from "lucide-react";
-import Image from "next/image";
+import { TrendingUp } from "lucide-react";
 import MovieCard from "./MovieCard";
-
 
 const trendingNow = [
   {
@@ -95,8 +60,8 @@ const trendingNow = [
   },
 ];
 
-export default function TrendingSection(){
-    return(
+export default function TrendingSection() {
+  return (
     <div className="mb-16 px-6 lg:px-12">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
@@ -114,4 +79,5 @@ export default function TrendingSection(){
         </div>
       </ScrollArea>
     </div>
-  );}
+  );
+}

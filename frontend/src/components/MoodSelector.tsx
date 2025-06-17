@@ -1,39 +1,15 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
 import {
-  Home,
-  Bookmark,
-  Users,
-  Search,
-  User,
-  Play,
-  Plus,
-  Star,
   Heart,
   Smile,
   Zap,
   Coffee,
   Moon,
-  ChevronLeft,
-  ChevronRight,
-  Volume2,
-  Info,
-  ThumbsUp,
-  Share2,
-  Clock,
-  Calendar,
-  TrendingUp,
   FlameIcon as Fire,
-  Award,
 } from "lucide-react"
-import Image from "next/image"
 import MovieSection from "./MovieSection"
 
 const movieSections = {
