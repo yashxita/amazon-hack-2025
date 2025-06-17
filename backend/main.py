@@ -33,11 +33,11 @@ app.add_middleware(
 @app.on_event("startup")
 def load_artifacts():
     global tfidf, tfidf_matrix, movies, content_sim, mood_genre_mapping
-    tfidf = joblib.load("tfidf_vectorizer.joblib")
-    tfidf_matrix = joblib.load("tfidf_matrix.joblib")
-    movies = joblib.load("movies_dataframe.joblib")
-    content_sim = joblib.load("content_sim.joblib")
-    mood_genre_mapping = joblib.load("mood_genre_mapping.joblib")
+    tfidf = joblib.load("./artifacts/tfidf_vectorizer.joblib")
+    tfidf_matrix = joblib.load("./artifacts/tfidf_matrix.joblib")
+    movies = joblib.load("./artifacts/movies_dataframe.joblib")
+    content_sim = joblib.load("./artifacts/content_sim.joblib")
+    mood_genre_mapping = joblib.load("./artifacts/mood_genre_mapping.joblib")
 
 # Pydantic models
 class RecommendationRequest(BaseModel):

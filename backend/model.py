@@ -15,7 +15,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # Load dataset
-movies = pd.read_csv('tmdb_5000_movies.csv')
+movies = pd.read_csv('./data/tmdb_5000_movies.csv')
 
 # Remove rows with null overviews
 movies = movies[movies['overview'].notnull()].copy()
@@ -65,18 +65,18 @@ movies['weighted_rating_norm'] = (movies['weighted_rating'] - movies['weighted_r
 import joblib
 
 # Save the fitted vectorizer
-joblib.dump(tfidf, 'tfidf_vectorizer.joblib')
+joblib.dump(tfidf, './artifacts/tfidf_vectorizer.joblib')
 
-joblib.dump(tfidf_matrix, 'tfidf_matrix.joblib')
+joblib.dump(tfidf_matrix, './artifacts/tfidf_matrix.joblib')
 
 # Save the processed DataFrame
-joblib.dump(movies, 'movies_dataframe.joblib')
+joblib.dump(movies, './artifacts/movies_dataframe.joblib')
 
 # Save the cosine similarity matrix if needed (optional)
-joblib.dump(content_sim, 'content_sim.joblib')
+joblib.dump(content_sim, './artifacts/content_sim.joblib')
 
 # Save the mood_genre_mapping dictionary (optional, or redefine in backend)
-joblib.dump(mood_genre_mapping, 'mood_genre_mapping.joblib')
+joblib.dump(mood_genre_mapping, './artifacts/mood_genre_mapping.joblib')
 
 def recommend_movies_by_mood(mood, user_history_titles=None, top_n=10, alpha=0.4, beta=0.3, gamma=0.3):
     genre_weights = mood_genre_mapping.get(mood, {})
@@ -270,7 +270,7 @@ def get_genre_tag(user_watched_genres):
 # --- Part 2: Load Movie Data and Create Title-to-Genre Mapping ---
 
 try:
-    movies_df = pd.read_csv('tmdb_5000_movies.csv')
+    movies_df = pd.read_csv('./data/tmdb_5000_movies.csv')
 except FileNotFoundError:
     print("Error: 'tmdb_5000_movies.csv' not found. Please ensure the file is in the correct directory.")
     exit()
