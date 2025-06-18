@@ -49,6 +49,9 @@ class MovieRecommendation(BaseModel):
     title: str
     score: float
     genres: List[str]
+    poster_path: str
+    release_date:str
+
 
 class RecommendationResponse(BaseModel):
     recommendations: List[MovieRecommendation]
@@ -86,13 +89,15 @@ async def get_recommendations(request: RecommendationRequest):
             user_history_titles=request.user_history,
             top_n=request.top_n
         )
-        # df should be a DataFrame with columns ['title', 'score', 'genres']
+        # df should be a DataFrame with columns ['title', 'score', 'genres'
         return {
             "recommendations": [
                 {
                     "title": row.title,
                     "score": round(row.score, 4),
-                    "genres": row['Genres']
+                    "genres": row['Genres'],
+                    "poster_path":row['poster_path'],
+                    "release_date":row['release_date']
                 } for _, row in df.iterrows()
             ]
         }
