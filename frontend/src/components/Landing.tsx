@@ -1,5 +1,6 @@
 "use client";
 
+import HeroTV from "./HeroTV";
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,7 +92,8 @@ export default function Landing() {
       <main className="pt-20">
         {activeTab === "home" && (
           <div>
-            <Hero />
+            <HeroTV></HeroTV>
+            {/* <Hero /> */}
             <div className="py-16">
               <RecentlyWatchedSection />
               <DayRecommendationSection />
