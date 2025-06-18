@@ -83,7 +83,7 @@ async def get_recommendations(request: RecommendationRequest):
         # Use the imported function and pass required globals
         df = recommend_movies_by_mood(
             mood=request.mood,
-            user_history_titless=request.user_history,
+            user_history_titles=request.user_history,
             top_n=request.top_n
         )
         # df should be a DataFrame with columns ['title', 'score', 'genres']
