@@ -25,6 +25,8 @@ export interface RecommendationResponse {
 export async function getRecommendations(
   mood: string
 ): Promise<RecommendationResponse["recommendations"]> {
+  const token = localStorage.getItem("token"); // assuming it's stored with this key
+
   const requestBody: RecommendationRequest = {
     mood,
     user_history: ["Inception", "The Matrix"], // Dummy history
@@ -38,6 +40,7 @@ export async function getRecommendations(
       {
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
       }
     );
@@ -50,6 +53,7 @@ export async function getRecommendations(
     return [];
   }
 }
+
 
 // ============================================================================
 // AUTHENTICATION INTERFACES & FUNCTIONS
