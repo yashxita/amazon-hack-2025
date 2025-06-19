@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
@@ -7,6 +7,9 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict
 from dotenv import load_dotenv
 import databases, sqlalchemy, joblib, asyncio, os, uuid
+from sqlalchemy import UniqueConstraint
+import sqlalchemy
+from datetime import datetime
 
 from model import (
     recommend_movies_by_mood,
@@ -41,16 +44,41 @@ class UserCreate(BaseModel):
     username: str
     password: str
 
+class WatchlistGroupCreate(BaseModel):
+    name: str
+
+class WatchlistGroupOut(BaseModel):
+    id: str
+    name: str
+
 class WatchlistCreate(BaseModel):
     movie_id: str
     movie_name: str
 
+class WatchlistMovieOut(BaseModel):
+    id: str
+    movie_id: str
+    movie_name: str
+
+class WatchlistDetailOut(BaseModel):
+    id: str
+    name: str
+    movies: List[WatchlistMovieOut]
+
 class WatchlistUpdate(BaseModel):
     movie_name: str
 
+class WatchHistoryAddRequest(BaseModel):
+    movie_id: str
+    movie_name: str
+
+class WatchHistoryItem(BaseModel):
+    movie_id: str
+    movie_name: str
+    watched_at: str  # ISO format string
+
 class RecommendationRequest(BaseModel):
     mood: str
-    user_history: Optional[List[str]] = []
     top_n: int = 10
 
 class MovieRecommendation(BaseModel):
@@ -64,13 +92,10 @@ class RecommendationResponse(BaseModel):
     recommendations: List[MovieRecommendation]
 
 class BlendCreateRequest(BaseModel):
-    user_history: List[str]
-    user_id: str = "User1"
+    name: str  # blend name
 
 class BlendJoinRequest(BaseModel):
     code: str
-    user_history: List[str]
-    user_id: str = "User2"
 
 class BlendRecommendation(BaseModel):
     title: str
@@ -84,6 +109,14 @@ class BlendResponse(BaseModel):
     recommendations: List[BlendRecommendation]
     overall_match_score: str
 
+class BlendInviteRequest(BaseModel):
+    blend_code: str
+    user_id: str  # user to invite
+
+class BlendSummary(BaseModel):
+    code: str
+    name: str
+
 # === Database Setup ===
 database = databases.Database(DATABASE_URL)
 metadata = sqlalchemy.MetaData()
@@ -95,12 +128,47 @@ users = sqlalchemy.Table(
     sqlalchemy.Column("hashed_password", sqlalchemy.String),
 )
 
+# --- Watchlist tables ---
+watchlist_groups = sqlalchemy.Table(
+    "watchlist_groups", metadata,
+    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
+    sqlalchemy.Column("user_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
+    sqlalchemy.Column("name", sqlalchemy.String),
+)
+
 watchlists = sqlalchemy.Table(
     "watchlists", metadata,
+    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
+    sqlalchemy.Column("group_id", sqlalchemy.String, sqlalchemy.ForeignKey("watchlist_groups.id")),
+    sqlalchemy.Column("movie_id", sqlalchemy.String),
+    sqlalchemy.Column("movie_name", sqlalchemy.String),
+)
+
+# --- Watch History table ---
+watch_history = sqlalchemy.Table(
+    "watch_history", metadata,
     sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
     sqlalchemy.Column("user_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
     sqlalchemy.Column("movie_id", sqlalchemy.String),
     sqlalchemy.Column("movie_name", sqlalchemy.String),
+    sqlalchemy.Column("watched_at", sqlalchemy.DateTime),
+)
+
+# --- Blend tables ---
+blends = sqlalchemy.Table(
+    "blends", metadata,
+    sqlalchemy.Column("code", sqlalchemy.String, primary_key=True),
+    sqlalchemy.Column("creator_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
+    sqlalchemy.Column("name", sqlalchemy.String, nullable=False),
+    UniqueConstraint("name", name="uq_blend_name")
+)
+
+blend_members = sqlalchemy.Table(
+    "blend_members", metadata,
+    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
+    sqlalchemy.Column("blend_code", sqlalchemy.String, sqlalchemy.ForeignKey("blends.code")),
+    sqlalchemy.Column("user_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
+    sqlalchemy.Column("invited_by", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
 )
 
 engine = sqlalchemy.create_engine(DATABASE_URL.replace("aiosqlite", "pysqlite"))
@@ -151,7 +219,6 @@ async def signup(user: UserCreate):
     query = users.select().where(users.c.username == user.username)
     if await database.fetch_one(query):
         raise HTTPException(status_code=400, detail="Username already exists")
-
     user_id = str(uuid.uuid4())
     hashed_pw = hash_password(user.password)
     query = users.insert().values(id=user_id, username=user.username, hashed_password=hashed_pw)
@@ -164,7 +231,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await database.fetch_one(query)
     if not user or not verify_password(form_data.password, user["hashed_password"]):
         raise HTTPException(status_code=400, detail="Invalid credentials")
-
     token = create_token(user["id"])
     return {"access_token": token, "token_type": "bearer"}
 
@@ -172,53 +238,21 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 async def read_users_me(user=Depends(get_current_user)):
     return {"id": user["id"], "username": user["username"]}
 
-# === Watchlist Routes ===
-@app.post("/watchlist", status_code=201)
-async def create_watchlist(item: WatchlistCreate, user=Depends(get_current_user)):
-    existing = await database.fetch_one(
-        watchlists.select().where(
-            (watchlists.c.user_id == user["id"]) & (watchlists.c.movie_id == item.movie_id)
-        )
-    )
-    if existing:
-        raise HTTPException(status_code=400, detail="Movie already in watchlist")
-    query = watchlists.insert().values(
-        id=str(uuid.uuid4()),
-        user_id=user["id"],
-        movie_id=item.movie_id,
-        movie_name=item.movie_name
-    )
-    await database.execute(query)
-    return {"msg": "Movie added to watchlist"}
-
-@app.get("/watchlist")
-async def read_watchlist(user=Depends(get_current_user)):
-    query = watchlists.select().where(watchlists.c.user_id == user["id"])
-    return await database.fetch_all(query)
-
-@app.put("/watchlist/{movie_id}")
-async def update_watchlist(movie_id: str, item: WatchlistUpdate, user=Depends(get_current_user)):
-    query = watchlists.update().where(
-        (watchlists.c.user_id == user["id"]) & (watchlists.c.movie_id == movie_id)
-    ).values(movie_name=item.movie_name)
-    await database.execute(query)
-    return {"msg": "Movie updated"}
-
-@app.delete("/watchlist/{movie_id}")
-async def delete_watchlist(movie_id: str, user=Depends(get_current_user)):
-    query = watchlists.delete().where(
-        (watchlists.c.user_id == user["id"]) & (watchlists.c.movie_id == movie_id)
-    )
-    await database.execute(query)
-    return {"msg": "Movie removed from watchlist"}
-
 # === Recommendation Routes ===
 @app.post("/recommend", response_model=RecommendationResponse)
-async def get_recommendations(request: RecommendationRequest):
+async def get_recommendations(request: RecommendationRequest, user=Depends(get_current_user)):
+    # Fetch the user's watch history from the DB
+    movie_rows = await database.fetch_all(
+        watch_history.select()
+        .where(watch_history.c.user_id == user["id"])
+        .order_by(watch_history.c.watched_at.desc())
+    )
+    user_history = [m["movie_name"] for m in movie_rows]
+
     try:
         df = recommend_movies_by_mood(
             mood=request.mood,
-            user_history_titles=request.user_history,
+            user_history_titles=user_history,
             top_n=request.top_n
         )
         return {
@@ -235,45 +269,324 @@ async def get_recommendations(request: RecommendationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+# === Watchlist Routes ===
+@app.post("/watchlists", response_model=WatchlistGroupOut)
+async def create_watchlist(item: WatchlistGroupCreate, user=Depends(get_current_user)):
+    query = watchlist_groups.select().where(
+        (watchlist_groups.c.user_id == user["id"]) &
+        (watchlist_groups.c.name == item.name)
+    )
+    existing = await database.fetch_one(query)
+    if existing:
+        raise HTTPException(status_code=400, detail="Watchlist already exists.")
+    group_id = str(uuid.uuid4())
+    query = watchlist_groups.insert().values(id=group_id, user_id=user["id"], name=item.name)
+    await database.execute(query)
+    return {"id": group_id, "name": item.name}
+
+@app.get("/watchlists", response_model=List[WatchlistGroupOut])
+async def list_all_watchlists(user=Depends(get_current_user)):
+    query = watchlist_groups.select().where(watchlist_groups.c.user_id == user["id"])
+    rows = await database.fetch_all(query)
+    return [{"id": row["id"], "name": row["name"]} for row in rows]
+
+@app.post("/watchlists/{group_id}/movies", status_code=201)
+async def add_movie_to_watchlist(group_id: str, item: WatchlistCreate, user=Depends(get_current_user)):
+    group = await database.fetch_one(watchlist_groups.select().where(
+        (watchlist_groups.c.id == group_id) & (watchlist_groups.c.user_id == user["id"])
+    ))
+    if not group:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
+    existing = await database.fetch_one(
+        watchlists.select().where(
+            (watchlists.c.group_id == group_id) & (watchlists.c.movie_id == item.movie_id)
+        )
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Movie already in watchlist")
+    movie_entry_id = str(uuid.uuid4())
+    query = watchlists.insert().values(
+        id=movie_entry_id,
+        group_id=group_id,
+        movie_id=item.movie_id,
+        movie_name=item.movie_name
+    )
+    await database.execute(query)
+    return {"msg": "Movie added to watchlist"}
+
+@app.get("/watchlists/{group_id}", response_model=WatchlistDetailOut)
+async def get_watchlist_detail(group_id: str, user=Depends(get_current_user)):
+    group = await database.fetch_one(watchlist_groups.select().where(
+        (watchlist_groups.c.id == group_id) & (watchlist_groups.c.user_id == user["id"])
+    ))
+    if not group:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
+    query = watchlists.select().where(watchlists.c.group_id == group_id)
+    movies = await database.fetch_all(query)
+    return {
+        "id": group["id"],
+        "name": group["name"],
+        "movies": [
+            {"id": m["id"], "movie_id": m["movie_id"], "movie_name": m["movie_name"]}
+            for m in movies
+        ]
+    }
+
+@app.delete("/watchlists/{group_id}/movies/{movie_id}")
+async def remove_movie_from_watchlist(group_id: str, movie_id: str, user=Depends(get_current_user)):
+    group = await database.fetch_one(watchlist_groups.select().where(
+        (watchlist_groups.c.id == group_id) & (watchlist_groups.c.user_id == user["id"])
+    ))
+    if not group:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
+    query = watchlists.delete().where(
+        (watchlists.c.group_id == group_id) & (watchlists.c.movie_id == movie_id)
+    )
+    await database.execute(query)
+    return {"msg": "Movie removed from watchlist"}
+
+@app.delete("/watchlists/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_watchlist(group_id: str, user=Depends(get_current_user)):
+    # Check if the watchlist group exists and belongs to the user
+    group = await database.fetch_one(watchlist_groups.select().where(
+        (watchlist_groups.c.id == group_id) & (watchlist_groups.c.user_id == user["id"])
+    ))
+    if not group:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
+    # Delete all movies in the watchlist group
+    await database.execute(watchlists.delete().where(watchlists.c.group_id == group_id))
+    # Delete the watchlist group
+    await database.execute(watchlist_groups.delete().where(watchlist_groups.c.id == group_id))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+# === Blend Routes ===
 @app.post("/blend/create", response_model=BlendResponse)
-async def create_blend_session(request: BlendCreateRequest):
-    code = create_blend_code(request.user_history, request.user_id)
-    result = join_blend_code(code, request.user_history, request.user_id)
-    if "error" in result:
-        raise HTTPException(status_code=400, detail=result["error"])
-    recs = result["recommendations"]
-    recommendations = recs.get("blend_recommendations", []) if isinstance(recs, dict) else recs
-    overall_match_score = recs.get("overall_match_score", "0%") if isinstance(recs, dict) else "0%"
+async def create_blend_session(request: BlendCreateRequest, user=Depends(get_current_user)):
+    # Check for duplicate blend name (case-insensitive)
+    query = blends.select().where(
+        (blends.c.creator_id == user["id"]) &
+        (sqlalchemy.func.lower(blends.c.name) == request.name.lower())
+    )
+    existing = await database.fetch_one(query)
+    if existing:
+        raise HTTPException(status_code=400, detail="Blend with this name already exists.")
+    code = str(uuid.uuid4())[:8]
+    await database.execute(blends.insert().values(
+        code=code,
+        creator_id=user["id"],
+        name=request.name
+    ))
+    await database.execute(blend_members.insert().values(
+        id=str(uuid.uuid4()),
+        blend_code=code,
+        user_id=user["id"],
+        invited_by=user["id"]
+    ))
     return {
         "blend_code": code,
-        "users": result["users"],
-        "user_tags": result["user_tags"],
-        "recommendations": recommendations,
-        "overall_match_score": overall_match_score
+        "users": [user["username"]],
+        "user_tags": {},
+        "recommendations": [],
+        "overall_match_score": ""
     }
+
+@app.post("/blend/invite")
+async def invite_to_blend(request: BlendInviteRequest, user=Depends(get_current_user)):
+    # Allow any existing member to invite
+    member = await database.fetch_one(
+        blend_members.select().where(
+            (blend_members.c.blend_code == request.blend_code) &
+            (blend_members.c.user_id == user["id"])
+        )
+    )
+    if not member:
+        raise HTTPException(status_code=403, detail="Only blend members can invite.")
+
+    already_invited = await database.fetch_one(
+        blend_members.select().where(
+            (blend_members.c.blend_code == request.blend_code) &
+            (blend_members.c.user_id == request.user_id)
+        )
+    )
+    if already_invited:
+        raise HTTPException(status_code=400, detail="User already invited to this blend.")
+
+    await database.execute(blend_members.insert().values(
+        id=str(uuid.uuid4()),
+        blend_code=request.blend_code,
+        user_id=request.user_id,
+        invited_by=user["id"]
+    ))
+    return {"msg": "User invited"}
 
 @app.post("/blend/join", response_model=BlendResponse)
-async def join_blend_session(request: BlendJoinRequest):
-    result = join_blend_code(request.code, request.user_history, request.user_id)
-    if "error" in result:
-        raise HTTPException(status_code=400, detail=result["error"])
-    recs = result["recommendations"]
+async def join_blend_session(request: BlendJoinRequest, user=Depends(get_current_user)):
+    # 1. Check if user is a member (invited)
+    member = await database.fetch_one(
+        blend_members.select().where(
+            (blend_members.c.blend_code == request.code) &
+            (blend_members.c.user_id == user["id"])
+        )
+    )
+    if not member:
+        raise HTTPException(status_code=403, detail="You are not invited to this blend.")
+
+    # 2. Get all user_ids in this blend
+    members = await database.fetch_all(
+        blend_members.select().where(blend_members.c.blend_code == request.code)
+    )
+    user_ids = [m["user_id"] for m in members]
+
+    # 3. For each user, get their watch history (all movie_names from watch_history)
+    user_histories = []
+    user_tags = {}
+    usernames = []
+    for uid in user_ids:
+        # Fetch all watched movies for this user, ordered by most recent
+        movie_rows = await database.fetch_all(
+            watch_history.select()
+            .where(watch_history.c.user_id == uid)
+            .order_by(watch_history.c.watched_at.desc())
+        )
+        history = [m["movie_name"] for m in movie_rows]
+        user_histories.append(history)
+        # Assign tag for this user
+        user_tags[uid] = assign_tag_from_movie_history(history)
+        # Get username
+        u = await database.fetch_one(users.select().where(users.c.id == uid))
+        usernames.append(u["username"] if u else uid)
+
+    # 4. Call recommend_blend with all user histories
+    recs = recommend_blend(user_histories)
     recommendations = recs.get("blend_recommendations", []) if isinstance(recs, dict) else recs
     overall_match_score = recs.get("overall_match_score", "0%") if isinstance(recs, dict) else "0%"
+
     return {
         "blend_code": request.code,
-        "users": result["users"],
-        "user_tags": result["user_tags"],
+        "users": usernames,
+        "user_tags": user_tags,
         "recommendations": recommendations,
         "overall_match_score": overall_match_score
     }
 
-# === Root ===
+@app.get("/blends", response_model=List[BlendSummary])
+async def list_all_blends(user=Depends(get_current_user)):
+    # Get all blend membership records for this user
+    member_rows = await database.fetch_all(
+        blend_members.select().where(blend_members.c.user_id == user["id"])
+    )
+    blend_codes = [row["blend_code"] for row in member_rows]
+    if not blend_codes:
+        return []
+    blends_query = blends.select().where(blends.c.code.in_(blend_codes))
+    blends_info = await database.fetch_all(blends_query)
+    # Only return blends that actually exist (ignore None)
+    return [
+        {"code": b["code"], "name": b["name"] or "Unnamed Blend"}
+        for b in blends_info if b["name"] is not None
+    ]
+
+@app.get("/blend/{code}", response_model=BlendResponse)
+async def get_blend_details(code: str, user=Depends(get_current_user)):
+    # Check if user is a member of the blend
+    member = await database.fetch_one(
+        blend_members.select().where(
+            (blend_members.c.blend_code == code) &
+            (blend_members.c.user_id == user["id"])
+        )
+    )
+    if not member:
+        raise HTTPException(status_code=403, detail="You are not a member of this blend.")
+
+    # Get all user_ids in this blend
+    members = await database.fetch_all(
+        blend_members.select().where(blend_members.c.blend_code == code)
+    )
+    user_ids = [m["user_id"] for m in members]
+
+    # For each user, get their watch history
+    user_histories = []
+    user_tags = {}
+    usernames = []
+    for uid in user_ids:
+        # Fetch watch history from database
+        movie_rows = await database.fetch_all(
+            watch_history.select()
+            .where(watch_history.c.user_id == uid)
+            .order_by(watch_history.c.watched_at.desc())
+        )
+        history = [m["movie_name"] for m in movie_rows]
+        user_histories.append(history)
+        
+        # Generate user tag based on history
+        user_tags[uid] = assign_tag_from_movie_history(history)
+        
+        # Get username
+        u = await database.fetch_one(users.select().where(users.c.id == uid))
+        usernames.append(u["username"] if u else uid)
+
+    # Generate recommendations from all members' histories
+    recs = recommend_blend(user_histories)
+    recommendations = recs.get("blend_recommendations", []) if isinstance(recs, dict) else recs
+    overall_match_score = recs.get("overall_match_score", "0%") if isinstance(recs, dict) else "0%"
+
+    return {
+        "blend_code": code,
+        "users": usernames,
+        "user_tags": user_tags,
+        "recommendations": recommendations,
+        "overall_match_score": overall_match_score
+    }
+
+@app.delete("/blend/{code}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_blend(code: str, user=Depends(get_current_user)):
+    # Check if blend exists and user is the creator
+    blend = await database.fetch_one(blends.select().where(
+        (blends.c.code == code) & (blends.c.creator_id == user["id"])
+    ))
+    if not blend:
+        raise HTTPException(status_code=404, detail="Blend not found or you are not the creator")
+    # Delete all blend members
+    await database.execute(blend_members.delete().where(blend_members.c.blend_code == code))
+    # Delete the blend
+    await database.execute(blends.delete().where(blends.c.code == code))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+# === Watch History Routes ===
+@app.post("/history/add")
+async def add_to_watch_history(request: WatchHistoryAddRequest, user=Depends(get_current_user)):
+    entry_id = str(uuid.uuid4())
+    await database.execute(
+        watch_history.insert().values(
+            id=entry_id,
+            user_id=user["id"],
+            movie_id=request.movie_id,
+            movie_name=request.movie_name,
+            watched_at=datetime.utcnow()
+        )
+    )
+    return {"msg": "Added to watch history"}
+
+@app.get("/history", response_model=List[WatchHistoryItem])
+async def get_watch_history(user=Depends(get_current_user)):
+    # Fetch watch history for the current user, most recent first
+    query = watch_history.select().where(
+        watch_history.c.user_id == user["id"]
+    ).order_by(watch_history.c.watched_at.desc())
+    rows = await database.fetch_all(query)
+    return [
+        {
+            "movie_id": row["movie_id"],
+            "movie_name": row["movie_name"],
+            "watched_at": row["watched_at"].isoformat() if row["watched_at"] else None
+        }
+        for row in rows
+    ]
+
 @app.get("/")
 def read_root():
     return {"message": "Movie Recommendation API is running."}
 
-# === Run with Uvicorn ===
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
