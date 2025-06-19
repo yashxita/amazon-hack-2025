@@ -113,10 +113,10 @@ def recommend_movies_by_mood(mood, user_history_titles=None, top_n=10, alpha=0.4
 
         # Final Weighted Score
         final = alpha * mood_score + beta * sim_score + gamma * rating_score
-        scores.append((row['title'], final, genres,row['poster_path'],row['release_date']))
+        scores.append((row['title'], final, genres,row['poster_path'],row['release_date'],row['Movie_id']))
 
     scores.sort(key=lambda x: x[1], reverse=True)
-    return pd.DataFrame(scores[:top_n], columns=['title', 'score', 'Genres','poster_path','release_date'])
+    return pd.DataFrame(scores[:top_n], columns=['title', 'score', 'Genres','poster_path','release_date','Movie_id'])
 
 recommend_movies_by_mood(
     mood='happy',

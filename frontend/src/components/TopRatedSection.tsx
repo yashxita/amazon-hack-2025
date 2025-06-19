@@ -62,6 +62,7 @@ export default function TopRatedSection() {
               ),
               poster_path: movie.poster_path,
               release_date: movie.release_date || "Unknown",
+              id:movie.id
             })
           );
 

@@ -20,12 +20,17 @@ export default function MovieCard({ movie }: { movie: any }) {
   };
 
   const handleClick = () => {
+    console.log(movie);
     addToUserHistory({
       title: movie.title,
       score: movie.score,
       genres: movie.genre,
-      poster_path: movie.poster_path.replace("https://image.tmdb.org/t/p/w500", ""),
+      poster_path:
+        movie.poster_path?.replace("https://image.tmdb.org/t/p/w500", "") ||
+        movie.poster?.replace("https://image.tmdb.org/t/p/w500", "") ||
+        "",
       release_date: `${movie.year}-01-01`, // fake full date if needed
+      id: movie.id,
     }); // ✅ ADD TO HISTORY
     // optional: trigger modal, trailer, etc.
   };

@@ -262,7 +262,8 @@ async def get_recommendations(request: RecommendationRequest, user=Depends(get_c
                     "score": round(row.score, 4),
                     "genres": row['Genres'],
                     "poster_path": row['poster_path'],
-                    "release_date": row['release_date']
+                    "release_date": row['release_date'],
+                    "id":row['Movie_id']
                 } for _, row in df.iterrows()
             ]
         }

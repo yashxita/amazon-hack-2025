@@ -11,6 +11,7 @@ export interface RecommendationRequest {
 }
 
 export interface MovieRecommendation {
+    id:string,
   title: string;
   score: number;
   genres: string[];

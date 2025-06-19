@@ -14,22 +14,22 @@ export default function RecentlyWatchedSection() {
   }, [])
 
   const formatHistory = (arr: any[]) =>
-    arr.map((movie, idx) => ({
-      id: idx,
+    arr.map((movie) => ({
+      id: movie.id,
       title: movie.title,
       genre: movie.genres,
       score: Number(movie.score.toFixed(2)),
       match: Math.round(movie.score * 10),
       year: movie.release_date?.slice(0, 4) || "N/A",
-      poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+      poster: `https://image.tmdb.org/t/p/w500/${movie.poster_path}`,
     }))
 
-  const handleMovieClick = (movie: any) => {
-    setHistory((prev) => {
-      const filtered = prev.filter((m) => m.title !== movie.title)
-      return [formatHistory([movie])[0], ...filtered]
-    })
-  }
+  // const handleMovieClick = (movie: any) => {
+  //   setHistory((prev) => {
+  //     const filtered = prev.filter((m) => m.title !== movie.title)
+  //     return [formatHistory([movie])[0], ...filtered]
+  //   })
+  // }
 
   if (!history.length) return null
 

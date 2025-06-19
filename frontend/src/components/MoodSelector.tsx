@@ -189,31 +189,33 @@ export default function MoodSelector() {
       {/* Movie Sections */}
       <div ref={sectionsRef} className="space-y-8 mt-10">
         {selectedMoods.map((moodId) => {
-          const movies = movieSections[moodId]
-          if (!movies) return null
+  const movies = movieSections[moodId];
+  if (!movies) return null;
 
-          const MoodIcon = getMoodIcon(moodId)
+  const MoodIcon = getMoodIcon(moodId);
 
-          return (
-            <MovieSection
-              section={{
-                title: moods.find((m) => m.id === moodId)?.label || "Recommendations",
-                movies: movies
-                  .filter((movie) => movie.poster_path) // skip if poster_path is null or undefined
-                  .map((movie, idx) => ({
-                    id: idx,
-                    title: movie.title,
-                    genre: movie.genres,
-                    score: Number(movie.score.toFixed(2)),
-                    match: Math.round(movie.score * 10),
-                    year: movie.release_date ? Number.parseInt(movie.release_date.slice(0, 4)) : 2023,
-                    poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
-                  })),
-              }}
-              icon={MoodIcon}
-            />
-          )
-        })}
+  return (
+    <MovieSection
+      key={moodId} // ✅ Added key to fix warning
+      section={{
+        title: moods.find((m) => m.id === moodId)?.label || "Recommendations",
+        movies: movies
+          .filter((movie) => movie.poster_path) // skip if poster_path is null or undefined
+          .map((movie, idx) => ({
+            id: movie.id || idx, // optional: prefer unique movie.id if available
+            title: movie.title,
+            genre: movie.genres,
+            score: Number(movie.score.toFixed(2)),
+            match: Math.round(movie.score * 10),
+            year: movie.release_date ? Number.parseInt(movie.release_date.slice(0, 4)) : 2023,
+            poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+          })),
+      }}
+      icon={MoodIcon}
+    />
+  );
+})}
+
       </div>
     </div>
   )
