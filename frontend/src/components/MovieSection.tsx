@@ -75,7 +75,7 @@ export default function MovieSection({ section, icon: Icon }: { section: any; ic
       })
     }
   }
-
+  
   return (
     <div className="mb-16 px-6 lg:px-12">
       <div className="flex items-center justify-between mb-8">

@@ -1,28 +1,64 @@
 "use client";
 
 import HeroTV from "./HeroTV";
-import { useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Search,
-  FlameIcon as Fire,
-} from "lucide-react";
+import { Search, FlameIcon as Fire } from "lucide-react";
 import Hero from "./Hero";
 import MoodSelector from "./MoodSelector";
 import RecentlyWatchedSection from "./RecentlyWatchedSection";
-import TrendingSection from "./TrendingSection";
+// import TrendingSection from "./TrendingSection";
 import DayRecommendationSection from "./DayRecommendationSection";
 import Blend from "../components/Blend";
 import TopRatedSection from "./TopRatedSection";
 import Watchlist from "../components/WatchLists";
+import { logout } from "../../services/api"; // Adjust the path if needed
+import toast,{ Toaster } from "react-hot-toast";
+
 
 export default function Landing() {
   const [activeTab, setActiveTab] = useState("home");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [user, setUser] = useState<{ id: string; username: string } | null>(
+    null
+  );
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        const response = await axios.get("/me", {
+          baseURL: "http://0.0.0.0:8000",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setUser(response.data);
+      } catch (err) {
+        console.warn("Not logged in or session expired");
+        localStorage.removeItem("token");
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    setUser(null);
+    toast.success("Log Out Successful");
+   
+  };
+
   return (
     <div className="min-h-screen bg-black">
       {/* Navigation */}
+      <Toaster/>
       <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
         <div className="container mx-auto px-6 lg:px-12 py-4">
           <div className="flex items-center justify-between">
@@ -77,12 +113,28 @@ export default function Landing() {
                   <Search className="w-4 h-4" />
                 </Button>
               </div>
-              <Button
-                variant="outline"
-                className="border-blue-400 text-blue-400 hover:bg-blue-400/10 font-semibold"
-              >
-                LOGIN
-              </Button>
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-semibold">
+                    {user.username}
+                  </span>
+                  <Button
+                   
+                    className="border-red-500 text-red-400 bg-black hover:bg-red-100 font-semibold"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  
+                  className="border-blue-400 text-blue-400 hover:bg-blue-100 font-semibold"
+                  onClick={() => router.push("/login")}
+                >
+                  LOGIN
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -97,7 +149,7 @@ export default function Landing() {
             <div className="py-16">
               <RecentlyWatchedSection />
               <DayRecommendationSection />
-              <TrendingSection />
+              {/* <TrendingSection /> */}
               <MoodSelector />
               <TopRatedSection />
             </div>

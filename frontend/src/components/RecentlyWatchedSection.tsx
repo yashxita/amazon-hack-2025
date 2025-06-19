@@ -1,98 +1,47 @@
 "use client"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
-import {
-  Clock,
-  FlameIcon as Fire,
-} from "lucide-react"
-import RecentlyWatchedCard from "./RecentlyWatchedCard"
-const recentlyWatched = [
-  {
-    id: 101,
-    title: "Inception",
-    genre: ["Sci-Fi", "Thriller"],
-    rating: 8.8,
-    year: 2010,
-    poster: "/placeholder.svg?height=300&width=200",
-    progress: 75,
-    watchedAt: "2 hours ago",
-  },
-  {
-    id: 102,
-    title: "The Dark Knight",
-    genre: ["Action", "Crime"],
-    rating: 9.0,
-    year: 2008,
-    poster: "/placeholder.svg?height=300&width=200",
-    progress: 100,
-    watchedAt: "Yesterday",
-  },
-  {
-    id: 103,
-    title: "Interstellar",
-    genre: ["Sci-Fi", "Drama"],
-    rating: 8.6,
-    year: 2014,
-    poster: "/placeholder.svg?height=300&width=200",
-    progress: 45,
-    watchedAt: "3 days ago",
-  },
-  {
-    id: 104,
-    title: "Parasite",
-    genre: ["Thriller", "Drama"],
-    rating: 8.5,
-    year: 2019,
-    poster: "/placeholder.svg?height=300&width=200",
-    progress: 100,
-    watchedAt: "1 week ago",
-  },
-  {
-    id: 105,
-    title: "Mad Max: Fury Road",
-    genre: ["Action", "Adventure"],
-    rating: 8.1,
-    year: 2015,
-    poster: "/placeholder.svg?height=300&width=200",
-    progress: 30,
-    watchedAt: "1 week ago",
-  },
-  {
-    id: 106,
-    title: "Blade Runner 2049",
-    genre: ["Sci-Fi", "Drama"],
-    rating: 8.0,
-    year: 2017,
-    poster: "/placeholder.svg?height=300&width=200",
-    progress: 100,
-    watchedAt: "2 weeks ago",
-  },
-];
-export default function RecentlyWatchedSection(){
-    return(
-        <div className="mb-16 px-6 lg:px-12">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <Clock className="w-8 h-8 text-blue-400" />
-              <h2 className="text-white text-3xl font-black tracking-wide">
-                RECENTLY WATCHED
-              </h2>
-            </div>
-            <Button
-              variant="ghost"
-              className="text-blue-400 hover:text-blue-300 font-semibold"
-            >
-              VIEW ALL
-            </Button>
-          </div>
-          <ScrollArea className="w-full">
-            <div className="flex gap-6 pb-4">
-              {recentlyWatched.map((movie: any) => (
-                <RecentlyWatchedCard key={movie.id} movie={movie} />
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
-      );
+import { useEffect, useState } from "react"
+import { Clock } from "lucide-react"
+import { getUserHistory } from "../../services/api"
+import MovieSection from "./MovieSection"
+
+export default function RecentlyWatchedSection() {
+  const [history, setHistory] = useState<any[]>([])
+
+  useEffect(() => {
+    const stored = getUserHistory()
+    setHistory(formatHistory(stored))
+  }, [])
+
+  const formatHistory = (arr: any[]) =>
+    arr.map((movie, idx) => ({
+      id: idx,
+      title: movie.title,
+      genre: movie.genres,
+      score: Number(movie.score.toFixed(2)),
+      match: Math.round(movie.score * 10),
+      year: movie.release_date?.slice(0, 4) || "N/A",
+      poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+    }))
+
+  const handleMovieClick = (movie: any) => {
+    setHistory((prev) => {
+      const filtered = prev.filter((m) => m.title !== movie.title)
+      return [formatHistory([movie])[0], ...filtered]
+    })
+  }
+
+  if (!history.length) return null
+
+  return (
+    <div className="mb-16 px-6 lg:px-12">
+      <MovieSection
+        section={{
+          title: "Recently Watched",
+          movies: history,
+        }}
+        icon={Clock}
+      />
+    </div>
+  )
 }

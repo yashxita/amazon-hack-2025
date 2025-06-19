@@ -22,7 +22,7 @@ from model import (
 load_dotenv()
 
 # === Config ===
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./users.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./users.db") 
 SECRET_KEY = os.getenv("SECRET_KEY", "secret")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 

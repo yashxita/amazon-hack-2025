@@ -45,7 +45,10 @@ mood_genre_mapping = {
     'sad': {'drama': 0.5, 'romance': 0.3, 'documentary': 0.2},
     'thrilled': {'action': 0.5, 'thriller': 0.3, 'crime': 0.2},
     'scared': {'horror': 0.6, 'thriller': 0.3, 'mystery': 0.1},
-    'curious': {'documentary': 0.5, 'history': 0.3, 'sciencefiction': 0.2}
+    'curious': {'documentary': 0.5, 'history': 0.3, 'sciencefiction': 0.2},
+    'nostalgic':{'history': 0.5, 'thriller': 0.3, 'drama': 0.2},
+    'anxious':{'thriller': 0.4, 'mystery': 0.3, 'horror': 0.2, 'drama': 0.1},
+    'bored':{'comedy': 0.4, 'animation': 0.3, 'adventure': 0.2, 'fantasy': 0.1}
 }
 
 # IMDb weighted rating formula

@@ -92,7 +92,7 @@ export default function MoodSelector() {
           behavior: "smooth",
           block: "start",
         })
-      }, 10)
+      }, 90)
 
       if (!movieSections[moodId]) {
         try {
@@ -196,7 +196,6 @@ export default function MoodSelector() {
 
           return (
             <MovieSection
-              key={moodId}
               section={{
                 title: moods.find((m) => m.id === moodId)?.label || "Recommendations",
                 movies: movies
