@@ -21,14 +21,11 @@ from model import (
 # Load environment variables
 load_dotenv()
 
-# === Config ===
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./users.db")
 SECRET_KEY = os.getenv("SECRET_KEY", "secret")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 
-# === App & Middleware ===
 app = FastAPI(title="Movie Recommendation API")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,13 +34,31 @@ app.add_middleware(
 )
 
 # === Models ===
+
 class UserCreate(BaseModel):
     username: str
     password: str
 
+class WatchlistGroupCreate(BaseModel):
+    name: str
+
+class WatchlistGroupOut(BaseModel):
+    id: str
+    name: str
+
 class WatchlistCreate(BaseModel):
     movie_id: str
     movie_name: str
+
+class WatchlistMovieOut(BaseModel):
+    id: str
+    movie_id: str
+    movie_name: str
+
+class WatchlistDetailOut(BaseModel):
+    id: str
+    name: str
+    movies: List[WatchlistMovieOut]
 
 class WatchlistUpdate(BaseModel):
     movie_name: str
@@ -85,6 +100,7 @@ class BlendResponse(BaseModel):
     overall_match_score: str
 
 # === Database Setup ===
+
 database = databases.Database(DATABASE_URL)
 metadata = sqlalchemy.MetaData()
 
@@ -95,10 +111,19 @@ users = sqlalchemy.Table(
     sqlalchemy.Column("hashed_password", sqlalchemy.String),
 )
 
+# NEW: Watchlist group table for named lists
+watchlist_groups = sqlalchemy.Table(
+    "watchlist_groups", metadata,
+    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
+    sqlalchemy.Column("user_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
+    sqlalchemy.Column("name", sqlalchemy.String),
+)
+
+# Movies in a watchlist group
 watchlists = sqlalchemy.Table(
     "watchlists", metadata,
     sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
-    sqlalchemy.Column("user_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
+    sqlalchemy.Column("group_id", sqlalchemy.String, sqlalchemy.ForeignKey("watchlist_groups.id")),
     sqlalchemy.Column("movie_id", sqlalchemy.String),
     sqlalchemy.Column("movie_name", sqlalchemy.String),
 )
@@ -107,6 +132,7 @@ engine = sqlalchemy.create_engine(DATABASE_URL.replace("aiosqlite", "pysqlite"))
 metadata.create_all(engine)
 
 # === Security Helpers ===
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -131,6 +157,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # === Startup/Shutdown ===
+
 @app.on_event("startup")
 async def startup():
     await database.connect()
@@ -146,12 +173,12 @@ async def shutdown():
     await database.disconnect()
 
 # === Auth Routes ===
+
 @app.post("/signup")
 async def signup(user: UserCreate):
     query = users.select().where(users.c.username == user.username)
     if await database.fetch_one(query):
         raise HTTPException(status_code=400, detail="Username already exists")
-
     user_id = str(uuid.uuid4())
     hashed_pw = hash_password(user.password)
     query = users.insert().values(id=user_id, username=user.username, hashed_password=hashed_pw)
@@ -164,7 +191,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await database.fetch_one(query)
     if not user or not verify_password(form_data.password, user["hashed_password"]):
         raise HTTPException(status_code=400, detail="Invalid credentials")
-
     token = create_token(user["id"])
     return {"access_token": token, "token_type": "bearer"}
 
@@ -172,47 +198,86 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 async def read_users_me(user=Depends(get_current_user)):
     return {"id": user["id"], "username": user["username"]}
 
-# === Watchlist Routes ===
-@app.post("/watchlist", status_code=201)
-async def create_watchlist(item: WatchlistCreate, user=Depends(get_current_user)):
+# === Multiple Named Watchlists ===
+
+@app.post("/watchlists", response_model=WatchlistGroupOut)
+async def create_watchlist_group(item: WatchlistGroupCreate, user=Depends(get_current_user)):
+    # Check for duplicate name for this user
+    query = watchlist_groups.select().where(
+        (watchlist_groups.c.user_id == user["id"]) &
+        (watchlist_groups.c.name == item.name)
+    )
+    existing = await database.fetch_one(query)
+    if existing:
+        raise HTTPException(status_code=400, detail="Watchlist already exists.")
+    group_id = str(uuid.uuid4())
+    query = watchlist_groups.insert().values(id=group_id, user_id=user["id"], name=item.name)
+    await database.execute(query)
+    return {"id": group_id, "name": item.name}
+
+@app.get("/watchlists", response_model=List[WatchlistGroupOut])
+async def list_watchlist_groups(user=Depends(get_current_user)):
+    query = watchlist_groups.select().where(watchlist_groups.c.user_id == user["id"])
+    rows = await database.fetch_all(query)
+    return [{"id": row["id"], "name": row["name"]} for row in rows]
+
+@app.post("/watchlists/{group_id}/movies", status_code=201)
+async def add_movie_to_watchlist(group_id: str, item: WatchlistCreate, user=Depends(get_current_user)):
+    group = await database.fetch_one(watchlist_groups.select().where(
+        (watchlist_groups.c.id == group_id) & (watchlist_groups.c.user_id == user["id"])
+    ))
+    if not group:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
     existing = await database.fetch_one(
         watchlists.select().where(
-            (watchlists.c.user_id == user["id"]) & (watchlists.c.movie_id == item.movie_id)
+            (watchlists.c.group_id == group_id) & (watchlists.c.movie_id == item.movie_id)
         )
     )
     if existing:
         raise HTTPException(status_code=400, detail="Movie already in watchlist")
+    movie_entry_id = str(uuid.uuid4())
     query = watchlists.insert().values(
-        id=str(uuid.uuid4()),
-        user_id=user["id"],
+        id=movie_entry_id,
+        group_id=group_id,
         movie_id=item.movie_id,
         movie_name=item.movie_name
     )
     await database.execute(query)
     return {"msg": "Movie added to watchlist"}
 
-@app.get("/watchlist")
-async def read_watchlist(user=Depends(get_current_user)):
-    query = watchlists.select().where(watchlists.c.user_id == user["id"])
-    return await database.fetch_all(query)
+@app.get("/watchlists/{group_id}", response_model=WatchlistDetailOut)
+async def get_watchlist_detail(group_id: str, user=Depends(get_current_user)):
+    group = await database.fetch_one(watchlist_groups.select().where(
+        (watchlist_groups.c.id == group_id) & (watchlist_groups.c.user_id == user["id"])
+    ))
+    if not group:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
+    query = watchlists.select().where(watchlists.c.group_id == group_id)
+    movies = await database.fetch_all(query)
+    return {
+        "id": group["id"],
+        "name": group["name"],
+        "movies": [
+            {"id": m["id"], "movie_id": m["movie_id"], "movie_name": m["movie_name"]}
+            for m in movies
+        ]
+    }
 
-@app.put("/watchlist/{movie_id}")
-async def update_watchlist(movie_id: str, item: WatchlistUpdate, user=Depends(get_current_user)):
-    query = watchlists.update().where(
-        (watchlists.c.user_id == user["id"]) & (watchlists.c.movie_id == movie_id)
-    ).values(movie_name=item.movie_name)
-    await database.execute(query)
-    return {"msg": "Movie updated"}
-
-@app.delete("/watchlist/{movie_id}")
-async def delete_watchlist(movie_id: str, user=Depends(get_current_user)):
+@app.delete("/watchlists/{group_id}/movies/{movie_id}")
+async def remove_movie_from_watchlist(group_id: str, movie_id: str, user=Depends(get_current_user)):
+    group = await database.fetch_one(watchlist_groups.select().where(
+        (watchlist_groups.c.id == group_id) & (watchlist_groups.c.user_id == user["id"])
+    ))
+    if not group:
+        raise HTTPException(status_code=404, detail="Watchlist not found")
     query = watchlists.delete().where(
-        (watchlists.c.user_id == user["id"]) & (watchlists.c.movie_id == movie_id)
+        (watchlists.c.group_id == group_id) & (watchlists.c.movie_id == movie_id)
     )
     await database.execute(query)
     return {"msg": "Movie removed from watchlist"}
 
 # === Recommendation Routes ===
+
 @app.post("/recommend", response_model=RecommendationResponse)
 async def get_recommendations(request: RecommendationRequest):
     try:
@@ -268,12 +333,10 @@ async def join_blend_session(request: BlendJoinRequest):
         "overall_match_score": overall_match_score
     }
 
-# === Root ===
 @app.get("/")
 def read_root():
     return {"message": "Movie Recommendation API is running."}
 
-# === Run with Uvicorn ===
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
