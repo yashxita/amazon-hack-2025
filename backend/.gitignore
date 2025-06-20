@@ -6,4 +6,4 @@
 /artifacts/content_sim.joblib
 /artifacts/mood_genre_mapping.joblib
 /users.db/
-/.env/
+.env

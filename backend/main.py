@@ -90,6 +90,13 @@ class MovieRecommendation(BaseModel):
 class RecommendationResponse(BaseModel):
     recommendations: List[MovieRecommendation]
 
+class HistoryRecommendationRequest(BaseModel):
+    top_n: int = 10
+
+class HistoryRecommendationResponse(BaseModel):
+    recommendations: List[MovieRecommendation]
+    overall_match_score: str
+
 class BlendCreateRequest(BaseModel):
     name: str  # blend name
 
@@ -266,7 +273,7 @@ async def read_users_me(user=Depends(get_current_user)):
 
 # === Recommendation Routes ===
 @app.post("/recommend", response_model=RecommendationResponse)
-async def get_recommendations(request: RecommendationRequest, user=Depends(get_current_user)):
+async def recommend_by_mood(request: RecommendationRequest, user=Depends(get_current_user)):
     # Fetch the user's watch history from the DB
     movie_rows = await database.fetch_all(
         watch_history.select()
@@ -292,6 +299,42 @@ async def get_recommendations(request: RecommendationRequest, user=Depends(get_c
                     "id":row['Movie_id']
                 } for _, row in df.iterrows()
             ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    
+from model import recommend_for_user
+
+@app.post("/recommend/history", response_model=HistoryRecommendationResponse)
+async def recommend_by_history(request: HistoryRecommendationRequest, user=Depends(get_current_user)):
+    # Fetch user's watch history from DB
+    movie_rows = await database.fetch_all(
+        watch_history.select()
+        .where(watch_history.c.user_id == user["id"])
+        .order_by(watch_history.c.watched_at.desc())
+    )
+    user_history = [m["movie_name"] for m in movie_rows]
+
+    try:
+        recs = recommend_for_user(user_history, top_n=request.top_n)
+        if isinstance(recs, list):
+            # No recommendations, return empty list and default score
+            recommendations = []
+            overall_match_score = "0%"
+        else:
+            recommendations = recs.get("user_recommendations", [])
+            overall_match_score = recs.get("overall_match_score", "0%")
+        return {
+            "recommendations": [
+                {
+                    "title": r["title"],
+                    "score": r["match_score"],
+                    "genres": r["genres"],
+                    "poster_path": r["poster_path"],
+                    "release_date": r["release_date"]
+                } for r in recommendations
+            ],
+            "overall_match_score": overall_match_score
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
@@ -659,9 +702,6 @@ async def get_watch_history(user=Depends(get_current_user)):
 def read_root():
     return {"message": "Movie Recommendation API is running."}
 
-
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-

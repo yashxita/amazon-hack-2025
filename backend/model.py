@@ -411,7 +411,9 @@ def recommend_for_user(user_history, top_n=10, alpha=0.9, beta=0.1):
         scores.append({
             "title": row['title'],
             "genres": row['Genres'],
-            "match_score": round(match_score, 4)
+            "match_score": round(match_score, 4),
+            "poster_path": row.get('poster_path', ''),
+            "release_date": row.get('release_date', '')
         })
 
     # Sort and return top recommendations
@@ -430,6 +432,3 @@ user_history = [
     "The Dark Knight",
     "Interstellar"
 ]
-
-recommendations = recommend_for_user(user_history, top_n=5)
-print(recommendations)
