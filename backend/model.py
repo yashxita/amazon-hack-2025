@@ -354,3 +354,82 @@ join_blend_code(code, ['Frozen', 'Moana'], user_id="Bob")
 
 join_blend_code(code, ['Se7en', 'The Godfather'], user_id="Charlie")
 
+def recommend_for_user(user_history, top_n=10, alpha=0.9, beta=0.1):
+    """
+    Recommends movies for an individual user based on their watch history using
+    a combination of cosine similarity and normalized rating scores.
+
+    Parameters:
+        user_history (List[str]): List of movie titles watched by the user.
+        top_n (int): Number of top recommendations to return.
+        alpha (float): Weight for similarity score.
+        beta (float): Weight for rating score.
+
+    Returns:
+        dict: {
+            "user_recommendations": List of recommended movies,
+            "overall_match_score": Percentage match score across top_n movies
+        }
+    """
+    if not user_history:
+        return []
+
+    # Normalize user history (lowercase & deduplicate)
+    cleaned_history = set(title.lower().strip() for title in user_history if title.strip())
+    if not cleaned_history:
+        return []
+
+    # Get indices of the watched movies
+    indices = movies[movies['title'].str.lower().isin(cleaned_history)].index.tolist()
+    if not indices:
+        return []
+
+    # Build user profile vector from TF-IDF matrix
+    profile_vector = np.mean(tfidf_matrix[indices], axis=0).A1
+    user_sim = cosine_similarity([profile_vector], tfidf_matrix).flatten()
+
+    # Normalize rating (if not already)
+    if 'weighted_rating_norm' not in movies.columns:
+        min_rating = movies['weighted_rating'].min()
+        max_rating = movies['weighted_rating'].max()
+        if max_rating != min_rating:
+            movies['weighted_rating_norm'] = (movies['weighted_rating'] - min_rating) / (max_rating - min_rating)
+        else:
+            movies['weighted_rating_norm'] = 0.5  # fallback default
+
+    scores = []
+
+    for idx, row in movies.iterrows():
+        title_lc = row['title'].lower()
+        if title_lc in cleaned_history:
+            continue
+
+        sim_score = user_sim[idx]
+        rating_score = row.get('weighted_rating_norm', 0.5)
+        match_score = alpha * sim_score + beta * rating_score
+
+        scores.append({
+            "title": row['title'],
+            "genres": row['Genres'],
+            "match_score": round(match_score, 4)
+        })
+
+    # Sort and return top recommendations
+    scores.sort(key=lambda x: x['match_score'], reverse=True)
+
+    overall_match_raw = np.mean([x['match_score'] for x in scores[:top_n]]) if scores else 0.0
+    overall_match_percent = round(overall_match_raw * 100, 2)
+
+    return {
+        "user_recommendations": scores[:top_n],
+        "overall_match_score": f"{overall_match_percent}%"
+    }
+
+user_history = [
+    "Inception",
+    "The Dark Knight",
+    "Interstellar"
+]
+
+recommendations = recommend_for_user(user_history, top_n=5)
+print(recommendations)

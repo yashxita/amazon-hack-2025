@@ -210,11 +210,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        
         query = users.select().where(users.c.id == user_id)
-        return await database.fetch_one(query)
+        user = await database.fetch_one(query)
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        return user
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token signature")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Auth error: {str(e)}")
+
 
 # === Startup/Shutdown ===
 @app.on_event("startup")
@@ -651,6 +659,9 @@ async def get_watch_history(user=Depends(get_current_user)):
 def read_root():
     return {"message": "Movie Recommendation API is running."}
 
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
