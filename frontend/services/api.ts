@@ -1,113 +1,131 @@
-import axios from "axios";
+import axios from "axios"
 
 // ============================================================================
 // MOVIE RECOMMENDATION INTERFACES & FUNCTIONS
 // ============================================================================
 
 export interface RecommendationRequest {
-  mood: string;
-  user_history?: string[];
-  top_n?: number;
+  mood: string
+  user_history?: string[]
+  top_n?: number
 }
 
 export interface MovieRecommendation {
-    id:string,
-  title: string;
-  score: number;
-  genres: string[];
-  poster_path: string;
-  release_date: string;
+  id: string
+  title: string
+  score: number
+  genres: string[]
+  poster_path: string
+  release_date: string
 }
 
 export interface RecommendationResponse {
-  recommendations: MovieRecommendation[];
+  recommendations: MovieRecommendation[]
 }
 
-export async function getRecommendations(
-  mood: string
-): Promise<RecommendationResponse["recommendations"]> {
-  const token = localStorage.getItem("token"); // assuming it's stored with this key
+export interface HistoryRecommendationResponse {
+  recommendations: MovieRecommendation[]
+  overall_match_score: string
+}
+
+export async function getRecommendations(mood: string): Promise<RecommendationResponse["recommendations"]> {
+  const token = localStorage.getItem("token")
 
   const requestBody: RecommendationRequest = {
     mood,
-    user_history: ["Inception", "The Matrix"], // Dummy history
     top_n: 20,
-  };
+  }
 
   try {
-    const response = await axios.post<RecommendationResponse>(
-      "http://0.0.0.0:8000/recommend",
-      requestBody,
+    const response = await axios.post<RecommendationResponse>("http://localhost:8000/recommend", requestBody, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    return response.data.recommendations
+  } catch (error: any) {
+    console.error("Failed to fetch recommendations:", error.response?.data || error.message)
+    return []
+  }
+}
+
+export async function getHistoryBasedRecommendations(top_n = 20): Promise<HistoryRecommendationResponse> {
+  const token = localStorage.getItem("token")
+
+  try {
+    const response = await axios.post<HistoryRecommendationResponse>(
+      "http://localhost:8000/recommend/history",
+      { top_n },
       {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-      }
-    );
-    return response.data.recommendations;
+      },
+    )
+    return response.data
   } catch (error: any) {
-    console.error(
-      "Failed to fetch recommendations:",
-      error.response?.data || error.message
-    );
-    return [];
+    console.error("Failed to fetch history-based recommendations:", error.response?.data || error.message)
+    return {
+      recommendations: [],
+      overall_match_score: "0%",
+    }
   }
 }
-
 
 // ============================================================================
 // AUTHENTICATION INTERFACES & FUNCTIONS
 // ============================================================================
 
 export interface User {
-  id: string;
-  username: string;
+  id: string
+  username: string
 }
 
 export interface SignupRequest {
-  username: string;
-  password: string;
+  username: string
+  password: string
 }
 
 export interface LoginRequest {
-  username: string;
-  password: string;
+  username: string
+  password: string
 }
 
 export interface AuthResponse {
-  message: string;
-  access_token: string;
-  user: User;
+  message: string
+  access_token: string
+  user: User
 }
 
 export interface ApiError {
-  error: string;
+  error: string
 }
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
-  baseURL: "http://0.0.0.0:8000",
+  baseURL: "http://localhost:8000",
   headers: {
     "Content-Type": "application/json",
   },
-});
+})
 
 // Add request interceptor to include auth token
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token")
       if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        config.headers.Authorization = `Bearer ${token}`
       }
     }
-    return config;
+    return config
   },
   (error) => {
-    return Promise.reject(error);
-  }
-);
+    return Promise.reject(error)
+  },
+)
 
 // Add response interceptor to handle auth errors
 apiClient.interceptors.response.use(
@@ -116,13 +134,13 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid
       if (typeof window !== "undefined") {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
+        localStorage.removeItem("token")
+        window.location.href = "/login"
       }
     }
-    return Promise.reject(error);
-  }
-);
+    return Promise.reject(error)
+  },
+)
 
 // ============================================================================
 // AUTH API FUNCTIONS
@@ -130,196 +148,226 @@ apiClient.interceptors.response.use(
 
 export async function signup(userData: SignupRequest): Promise<AuthResponse> {
   try {
-    const response = await apiClient.post<AuthResponse>("/signup", userData);
-    return response.data;
+    const response = await apiClient.post<AuthResponse>("/signup", userData)
+    return response.data
   } catch (error: any) {
-    const errorMessage = error.response?.data?.error || "Signup failed";
-    throw new Error(errorMessage);
+    const errorMessage = error.response?.data?.error || "Signup failed"
+    throw new Error(errorMessage)
   }
 }
 
 export async function login(credentials: LoginRequest): Promise<AuthResponse> {
   try {
-    const formData = new URLSearchParams();
-    formData.append("username", credentials.username);
-    formData.append("password", credentials.password);
+    const formData = new URLSearchParams()
+    formData.append("username", credentials.username)
+    formData.append("password", credentials.password)
 
     const response = await apiClient.post<AuthResponse>("/login", formData, {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-    });
-    return response.data;
+    })
+    return response.data
   } catch (error: any) {
-    const errorMessage = error.response?.data?.error || "Login failed";
-    throw new Error(errorMessage);
+    const errorMessage = error.response?.data?.error || "Login failed"
+    throw new Error(errorMessage)
   }
 }
 
 export async function getCurrentUser(): Promise<User> {
   try {
-    const response = await apiClient.get<{ user: User }>("/me");
-    return response.data.user;
+    const response = await apiClient.get<{ user: User }>("/me")
+    return response.data.user
   } catch (error: any) {
-    const errorMessage =
-      error.response?.data?.error || "Failed to get user info";
-    throw new Error(errorMessage);
+    const errorMessage = error.response?.data?.error || "Failed to get user info"
+    throw new Error(errorMessage)
   }
 }
 
 export async function logout(): Promise<void> {
   try {
-    // Optional: await apiClient.post("/api/logout");
-
     if (typeof window !== "undefined") {
-      localStorage.removeItem("token");
+      localStorage.removeItem("token")
     }
   } catch (error) {
-    console.error("Logout error:", error);
+    console.error("Logout error:", error)
     if (typeof window !== "undefined") {
-      localStorage.removeItem("token");
+      localStorage.removeItem("token")
     }
   }
 }
-
 
 // ============================================================================
 // TOKEN MANAGEMENT UTILITIES
 // ============================================================================
 
 export function getStoredToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("token");
+  if (typeof window === "undefined") return null
+  return localStorage.getItem("token")
 }
 
 export function setStoredToken(token: string): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("token", token);
+  if (typeof window === "undefined") return
+  localStorage.setItem("token", token)
 }
 
 export function removeStoredToken(): void {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem("token");
+  if (typeof window === "undefined") return
+  localStorage.removeItem("token")
 }
 
 export function isTokenExpired(token: string): boolean {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const currentTime = Date.now() / 1000;
-    return payload.exp < currentTime;
+    const payload = JSON.parse(atob(token.split(".")[1]))
+    const currentTime = Date.now() / 1000
+    return payload.exp < currentTime
   } catch {
-    return true;
+    return true
   }
 }
 
 // ============================================================================
-// USER PREFERENCES API (Future Enhancement)
+// WATCH HISTORY API - DIRECT TO DATABASE
 // ============================================================================
 
-export interface UserPreferences {
-  favoriteGenres: string[];
-  watchedMovies: string[];
-  preferredMoods: string[];
+export interface WatchHistoryItem {
+  movie_id: string
+  movie_name: string
+  watched_at: string
 }
 
-export async function getUserPreferences(): Promise<UserPreferences> {
+export interface AddToHistoryRequest {
+  movie_id: string
+  movie_name: string
+}
+
+// Add movie to watch history (directly to database)
+export async function addToWatchHistory(movie: AddToHistoryRequest): Promise<void> {
   try {
-    const response = await apiClient.get<UserPreferences>(
-      "/api/user/preferences"
-    );
-    return response.data;
+    await apiClient.post("/history/add", movie)
   } catch (error: any) {
-    console.error("Failed to get user preferences:", error);
-    // Return default preferences
-    return {
-      favoriteGenres: [],
-      watchedMovies: [],
-      preferredMoods: [],
-    };
+    console.error("Failed to add to watch history:", error.response?.data || error.message)
+    throw new Error("Failed to add movie to watch history")
   }
 }
 
-export async function updateUserPreferences(
-  preferences: Partial<UserPreferences>
-): Promise<void> {
+// Get user's watch history from database
+export async function getWatchHistory(): Promise<WatchHistoryItem[]> {
   try {
-    await apiClient.put("/api/user/preferences", preferences);
+    const response = await apiClient.get<WatchHistoryItem[]>("/history")
+    return response.data
   } catch (error: any) {
-    const errorMessage =
-      error.response?.data?.error || "Failed to update preferences";
-    throw new Error(errorMessage);
+    console.error("Failed to get watch history:", error.response?.data || error.message)
+    return []
+  }
+}
+
+// Bulk add movies to watch history (for migration purposes)
+export async function bulkAddToWatchHistory(movies: AddToHistoryRequest[]): Promise<void> {
+  try {
+    // Add movies one by one to ensure proper error handling
+    for (const movie of movies) {
+      await addToWatchHistory(movie)
+    }
+  } catch (error: any) {
+    console.error("Failed to bulk add to watch history:", error)
+    throw new Error("Failed to add movies to watch history")
   }
 }
 
 // ============================================================================
-// MOVIE HISTORY API (Future Enhancement)
+// WATCHLIST API FUNCTIONS
 // ============================================================================
 
-// export interface MovieHistory {
-//   movieId: string
-//   title: string
-//   watchedAt: string
-//   rating?: number
-//   mood: string
-// }
+export interface WatchlistGroup {
+  id: string
+  name: string
+}
 
-// export async function addToHistory(movie: Omit<MovieHistory, "watchedAt">): Promise<void> {
-//   try {
-//     await apiClient.post("/api/user/history", {
-//       ...movie,
-//       watchedAt: new Date().toISOString(),
-//     })
-//   } catch (error: any) {
-//     console.error("Failed to add to history:", error)
-//   }
-// }
+export interface WatchlistMovie {
+  id: string
+  movie_id: string
+  movie_name: string
+  poster_path: string
+}
 
-// export async function getUserHistory(): Promise<MovieHistory[]> {
-//   try {
-//     const response = await apiClient.get<MovieHistory[]>("/api/user/history")
-//     return response.data
-//   } catch (error: any) {
-//     console.error("Failed to get user history:", error)
-//     return []
-//   }
-// }
+export interface WatchlistDetail {
+  id: string
+  name: string
+  movies: WatchlistMovie[]
+}
 
-// ============================================================================
-// ENHANCED RECOMMENDATIONS WITH USER DATA
-// ============================================================================
+export interface CreateWatchlistRequest {
+  name: string
+}
 
-// export async function getPersonalizedRecommendations(
-//   mood: string,
-//   includeHistory = true,
-// ): Promise<MovieRecommendation[]> {
-//   try {
-//     let userHistory: string[] = []
+export interface AddMovieToWatchlistRequest {
+  movie_id: string
+  movie_name: string
+}
 
-//     if (includeHistory && getStoredToken()) {
-//       const history = await getUserHistory()
-//       userHistory = history.map((h) => h.title)
-//     }
+// Create a new watchlist
+export async function createWatchlist(watchlist: CreateWatchlistRequest): Promise<WatchlistGroup> {
+  try {
+    const response = await apiClient.post<WatchlistGroup>("/watchlists", watchlist)
+    return response.data
+  } catch (error: any) {
+    console.error("Failed to create watchlist:", error.response?.data || error.message)
+    throw new Error("Failed to create watchlist")
+  }
+}
 
-//     const requestBody: RecommendationRequest = {
-//       mood,
-//       user_history: userHistory.length > 0 ? userHistory : ["Inception", "The Matrix"],
-//       top_n: 20,
-//     }
+// Get all user's watchlists
+export async function getWatchlists(): Promise<WatchlistGroup[]> {
+  try {
+    const response = await apiClient.get<WatchlistGroup[]>("/watchlists")
+    return response.data
+  } catch (error: any) {
+    console.error("Failed to get watchlists:", error.response?.data || error.message)
+    return []
+  }
+}
 
-//     const response = await axios.post<RecommendationResponse>("http://0.0.0.0:8000/recommend", requestBody, {
-//       headers: {
-//         "Content-Type": "application/json",
-//         ...(getStoredToken() && { Authorization: `Bearer ${getStoredToken()}` }),
-//       },
-//     })
+// Get watchlist details with movies
+export async function getWatchlistDetail(watchlistId: string): Promise<WatchlistDetail | null> {
+  try {
+    const response = await apiClient.get<WatchlistDetail>(`/watchlists/${watchlistId}`)
+    return response.data
+  } catch (error: any) {
+    console.error("Failed to get watchlist detail:", error.response?.data || error.message)
+    return null
+  }
+}
 
-//     return response.data.recommendations
-//   } catch (error: any) {
-//     console.error("Failed to fetch personalized recommendations:", error.response?.data || error.message)
-//     // Fallback to basic recommendations
-//     return getRecommendations(mood)
-//   }
-// }
+// Add movie to watchlist
+export async function addMovieToWatchlist(watchlistId: string, movie: AddMovieToWatchlistRequest): Promise<void> {
+  try {
+    await apiClient.post(`/watchlists/${watchlistId}/movies`, movie)
+  } catch (error: any) {
+    console.error("Failed to add movie to watchlist:", error.response?.data || error.message)
+    throw new Error("Failed to add movie to watchlist")
+  }
+}
+
+// Remove movie from watchlist
+export async function removeMovieFromWatchlist(watchlistId: string, movieId: string): Promise<void> {
+  try {
+    await apiClient.delete(`/watchlists/${watchlistId}/movies/${movieId}`)
+  } catch (error: any) {
+    console.error("Failed to remove movie from watchlist:", error.response?.data || error.message)
+    throw new Error("Failed to remove movie from watchlist")
+  }
+}
+
+// Delete entire watchlist
+export async function deleteWatchlist(watchlistId: string): Promise<void> {
+  try {
+    await apiClient.delete(`/watchlists/${watchlistId}`)
+  } catch (error: any) {
+    console.error("Failed to delete watchlist:", error.response?.data || error.message)
+    throw new Error("Failed to delete watchlist")
+  }
+}
 
 // ============================================================================
 // API HEALTH CHECK
@@ -327,39 +375,61 @@ export async function updateUserPreferences(
 
 export async function checkApiHealth(): Promise<boolean> {
   try {
-    await apiClient.get("/api/health");
-    return true;
+    await apiClient.get("/")
+    return true
   } catch {
-    return false;
+    return false
   }
 }
 
-// utils/userHistory.ts
-const USER_HISTORY_KEY = "user_history";
-const MAX_HISTORY = 20;
+// ============================================================================
+// UTILITY FUNCTIONS FOR MOVIE INTERACTIONS
+// ============================================================================
 
-export function getUserHistory(): MovieRecommendation[] {
-  if (typeof window === "undefined") return [];
-  const raw = localStorage.getItem(USER_HISTORY_KEY);
+// Mark movie as watched (adds to history and can remove from watchlist)
+export async function markMovieAsWatched(
+  movie: { movie_id: string; movie_name: string },
+  watchlistId?: string,
+): Promise<void> {
   try {
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
+    // Add to watch history
+    await addToWatchHistory(movie)
+
+    // Optionally remove from watchlist if provided
+    if (watchlistId) {
+      await removeMovieFromWatchlist(watchlistId, movie.movie_id)
+    }
+  } catch (error: any) {
+    console.error("Failed to mark movie as watched:", error)
+    throw new Error("Failed to mark movie as watched")
   }
 }
 
-export function addToUserHistory(movie: MovieRecommendation) {
-  if (typeof window === "undefined") return;
-  const history = getUserHistory();
-
-  const exists = history.find((m) => m.title === movie.title);
-  let newHistory = exists
-    ? [movie, ...history.filter((m) => m.title !== movie.title)]
-    : [movie, ...history];
-
-  if (newHistory.length > MAX_HISTORY) {
-    newHistory = newHistory.slice(0, MAX_HISTORY);
+// Get personalized recommendations based on user's watch history
+export async function getPersonalizedRecommendations(
+  top_n = 20,
+): Promise<{ recommendations: MovieRecommendation[]; matchScore: string }> {
+  try {
+    const result = await getHistoryBasedRecommendations(top_n)
+    return {
+      recommendations: result.recommendations,
+      matchScore: result.overall_match_score,
+    }
+  } catch (error: any) {
+    console.error("Failed to get personalized recommendations:", error)
+    return {
+      recommendations: [],
+      matchScore: "0%",
+    }
   }
+}
 
-  localStorage.setItem(USER_HISTORY_KEY, JSON.stringify(newHistory));
+export async function getWatchlist(watchlistId: string): Promise<WatchlistDetail | null> {
+  try {
+    const response = await apiClient.get<WatchlistDetail>(`/watchlists/${watchlistId}`)
+    return response.data
+  } catch (error: any) {
+    console.error("Failed to get watchlist detail:", error.response?.data || error.message)
+    return null
+  }
 }
