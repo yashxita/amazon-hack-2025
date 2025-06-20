@@ -3,7 +3,7 @@
 import HeroTV from "./HeroTV";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, FlameIcon as Fire } from "lucide-react";
@@ -22,7 +22,7 @@ import toast,{ Toaster } from "react-hot-toast";
 export default function Landing() {
   const [activeTab, setActiveTab] = useState("home");
   const [searchQuery, setSearchQuery] = useState("");
-
+  const pathname = usePathname() 
   const [user, setUser] = useState<{ id: string; username: string } | null>(
     null
   );
@@ -34,7 +34,7 @@ export default function Landing() {
         const token = localStorage.getItem("token");
         if (!token) return;
         const response = await axios.get("/me", {
-          baseURL: "http://0.0.0.0:8000",
+          baseURL: "http://127.0.0.1:8000",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -85,15 +85,15 @@ export default function Landing() {
                 >
                   WATCHLISTS
                 </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setActiveTab("blend")}
-                  className={`text-white hover:text-red-400 font-semibold tracking-wide ${
-                    activeTab === "blend" ? "text-red-400" : ""
-                  }`}
-                >
-                  BLEND
-                </Button>
+                  <Button
+                        variant="ghost"
+                        onClick={() => router.push("/blend")}   // <— go to /blend
+                        className={`text-white hover:text-red-400 font-semibold tracking-wide ${
+                          pathname.startsWith("/blend")  ? "text-red-400" : ""
+                        }`}
+                      >
+                        BLEND
+                    </Button>
               </div>
             </div>
 

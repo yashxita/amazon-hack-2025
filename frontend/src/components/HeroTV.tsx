@@ -106,18 +106,18 @@ useGLTF.preload("/Channel_Tv.glb");
 
 function CurvedTV() {
   const groupRef = useRef<THREE.Group>(null);
-  const { mouse } = useThree();
+  const { pointer } = useThree();
 
   useFrame(() => {
     if (!groupRef.current) return;
     groupRef.current.rotation.x = THREE.MathUtils.lerp(
       groupRef.current.rotation.x,
-      -mouse.y * 0.3,
+      -pointer.y * 0.3,
       0.05
     );
     groupRef.current.rotation.y = THREE.MathUtils.lerp(
       groupRef.current.rotation.y,
-      mouse.x * 0.5,
+      pointer.x * 0.5,
       0.01
     );
   });
@@ -130,7 +130,7 @@ function CurvedTV() {
         speed={1}
         floatingRange={[-0.2, 0.2]}
       >
-        <Model scale={4} position={[24, -7, 20]} />
+        <Model scale={4} position={[34, -7, 20]} />
       </Float>
     </group>
   );
@@ -152,21 +152,18 @@ export default function Hero() {
       {/* Canvas as background */}
       <div className="absolute inset-0 z-0">
         <Canvas
-          gl={{
-            alpha: false,
-            antialias: false,
-            preserveDrawingBuffer: true,
-            logarithmicDepthBuffer: true,
-          }}
-          dpr={[1, 1.5]}
-          camera={{ position: [50, 0, 70], fov: 50 }}
-        >
+            eventSource={document as unknown as HTMLElement}        // 👈 listen globally
+            eventPrefix="client"          // use clientX / clientY
+            gl={{ alpha: false, antialias: false, preserveDrawingBuffer: true, logarithmicDepthBuffer: true }}
+            dpr={[1, 1.5]}
+            camera={{ position: [50, 0, 70], fov: 50 }}
+          >
           <CameraLookAtCenter />
           <hemisphereLight intensity={0.5} />
 
           {/* Glowing ring meshes */}
           <Float floatIntensity={1} rotationIntensity={1}>
-            <mesh scale={15} position={[-24, 30, -50]}>
+            <mesh scale={20} position={[-24, 30, -50]}>
               <ringGeometry args={[0.9, 1, 4, 1]} />
               <meshStandardMaterial
                 color="white"
@@ -179,8 +176,8 @@ export default function Hero() {
 
           <Float floatIntensity={1} rotationIntensity={1}>
             <mesh
-              scale={12}
-              position={[36, 20, -30]}
+              scale={17}
+              position={[40, -15, -30]}
               rotation={[0, 0, Math.PI / 2.5]}
             >
               <ringGeometry args={[0.9, 1, 3, 1]} />

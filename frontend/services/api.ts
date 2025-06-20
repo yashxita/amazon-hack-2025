@@ -11,7 +11,6 @@ export interface RecommendationRequest {
 }
 
 export interface MovieRecommendation {
-    id:string,
   title: string;
   score: number;
   genres: string[];
@@ -24,7 +23,7 @@ export interface RecommendationResponse {
 }
 
 export async function getRecommendations(
-  mood: string
+  mood: string,
 ): Promise<RecommendationResponse["recommendations"]> {
   const token = localStorage.getItem("token"); // assuming it's stored with this key
 
@@ -36,25 +35,24 @@ export async function getRecommendations(
 
   try {
     const response = await axios.post<RecommendationResponse>(
-      "http://0.0.0.0:8000/recommend",
+      "http://127.0.0.1:8000/recommend",
       requestBody,
       {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
     return response.data.recommendations;
   } catch (error: any) {
     console.error(
       "Failed to fetch recommendations:",
-      error.response?.data || error.message
+      error.response?.data || error.message,
     );
     return [];
   }
 }
-
 
 // ============================================================================
 // AUTHENTICATION INTERFACES & FUNCTIONS
@@ -87,7 +85,7 @@ export interface ApiError {
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
-  baseURL: "http://0.0.0.0:8000",
+  baseURL: "http://127.0.0.1:8000",
   headers: {
     "Content-Type": "application/json",
   },
@@ -106,7 +104,7 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Add response interceptor to handle auth errors
@@ -121,7 +119,7 @@ apiClient.interceptors.response.use(
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // ============================================================================
@@ -158,19 +156,16 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
 
 export async function getCurrentUser(): Promise<User> {
   try {
-    const response = await apiClient.get<{ user: User }>("/me");
-    return response.data.user;
+    const response = await apiClient.get<{ id: string; username: string }>("/me");
+    return response.data;
   } catch (error: any) {
-    const errorMessage =
-      error.response?.data?.error || "Failed to get user info";
+    const errorMessage = error.response?.data?.error || "Failed to get user info";
     throw new Error(errorMessage);
   }
 }
 
 export async function logout(): Promise<void> {
   try {
-    // Optional: await apiClient.post("/api/logout");
-
     if (typeof window !== "undefined") {
       localStorage.removeItem("token");
     }
@@ -182,6 +177,81 @@ export async function logout(): Promise<void> {
   }
 }
 
+// ============================================================================
+// BLEND – SHARED-LIST RECOMMENDATION SESSIONS
+// ============================================================================
+
+// Interfaces returned by backend (see FastAPI Pydantic models)
+export interface BlendRecommendation {
+  poster_path: string;
+  title: string;
+  genres: string[];
+  match_score: number;
+}
+
+export interface BlendResponse {
+  name: string;
+  blend_code: string;
+  users: string[];
+  user_tags: Record<string, string>;
+  recommendations: BlendRecommendation[];
+  overall_match_score: string; // e.g. "87%"
+}
+
+export interface BlendSummary {
+  code: string;
+  name: string;
+}
+
+// ----------- Requests ------------
+export interface CreateBlendRequest {
+  name: string;
+}
+
+export interface InviteBlendRequest {
+  blend_code: string;
+  user_id: string;
+}
+
+export interface JoinBlendRequest {
+  code: string;
+}
+
+export interface InviteBlendResponse {
+  msg: string;
+}
+
+// ----------- API Calls -----------
+
+export async function createBlend(payload: CreateBlendRequest): Promise<BlendResponse> {
+  // correct FastAPI route is POST /blend/create
+  const res = await apiClient.post<BlendResponse>("/blend/create", payload);
+  return res.data;
+}
+
+export async function inviteToBlend(payload: InviteBlendRequest): Promise<InviteBlendResponse> {
+  const res = await apiClient.post<InviteBlendResponse>("/blend/invite", payload);
+  return res.data;
+}
+
+export async function joinBlend(payload: JoinBlendRequest): Promise<BlendResponse> {
+  const res = await apiClient.post<BlendResponse>("/blend/join", payload);
+  return res.data;
+}
+
+export async function listBlends(): Promise<BlendSummary[]> {
+  const res = await apiClient.get<BlendSummary[]>("/blends");
+  return res.data;
+}
+
+export async function getBlend(code: string): Promise<BlendResponse> {
+  const res = await apiClient.get<BlendResponse>(`/blend/${code}`);
+  return res.data;
+}
+
+export async function deleteBlend(code: string): Promise<void> {
+  await apiClient.delete(`/blend/${code}`);
+}
 
 // ============================================================================
 // TOKEN MANAGEMENT UTILITIES
@@ -224,102 +294,24 @@ export interface UserPreferences {
 
 export async function getUserPreferences(): Promise<UserPreferences> {
   try {
-    const response = await apiClient.get<UserPreferences>(
-      "/api/user/preferences"
-    );
+    const response = await apiClient.get<UserPreferences>("/api/user/preferences");
     return response.data;
   } catch (error: any) {
     console.error("Failed to get user preferences:", error);
-    // Return default preferences
-    return {
-      favoriteGenres: [],
-      watchedMovies: [],
-      preferredMoods: [],
-    };
+    return { favoriteGenres: [], watchedMovies: [], preferredMoods: [] };
   }
 }
 
 export async function updateUserPreferences(
-  preferences: Partial<UserPreferences>
+  preferences: Partial<UserPreferences>,
 ): Promise<void> {
   try {
     await apiClient.put("/api/user/preferences", preferences);
   } catch (error: any) {
-    const errorMessage =
-      error.response?.data?.error || "Failed to update preferences";
+    const errorMessage = error.response?.data?.error || "Failed to update preferences";
     throw new Error(errorMessage);
   }
 }
-
-// ============================================================================
-// MOVIE HISTORY API (Future Enhancement)
-// ============================================================================
-
-// export interface MovieHistory {
-//   movieId: string
-//   title: string
-//   watchedAt: string
-//   rating?: number
-//   mood: string
-// }
-
-// export async function addToHistory(movie: Omit<MovieHistory, "watchedAt">): Promise<void> {
-//   try {
-//     await apiClient.post("/api/user/history", {
-//       ...movie,
-//       watchedAt: new Date().toISOString(),
-//     })
-//   } catch (error: any) {
-//     console.error("Failed to add to history:", error)
-//   }
-// }
-
-// export async function getUserHistory(): Promise<MovieHistory[]> {
-//   try {
-//     const response = await apiClient.get<MovieHistory[]>("/api/user/history")
-//     return response.data
-//   } catch (error: any) {
-//     console.error("Failed to get user history:", error)
-//     return []
-//   }
-// }
-
-// ============================================================================
-// ENHANCED RECOMMENDATIONS WITH USER DATA
-// ============================================================================
-
-// export async function getPersonalizedRecommendations(
-//   mood: string,
-//   includeHistory = true,
-// ): Promise<MovieRecommendation[]> {
-//   try {
-//     let userHistory: string[] = []
-
-//     if (includeHistory && getStoredToken()) {
-//       const history = await getUserHistory()
-//       userHistory = history.map((h) => h.title)
-//     }
-
-//     const requestBody: RecommendationRequest = {
-//       mood,
-//       user_history: userHistory.length > 0 ? userHistory : ["Inception", "The Matrix"],
-//       top_n: 20,
-//     }
-
-//     const response = await axios.post<RecommendationResponse>("http://0.0.0.0:8000/recommend", requestBody, {
-//       headers: {
-//         "Content-Type": "application/json",
-//         ...(getStoredToken() && { Authorization: `Bearer ${getStoredToken()}` }),
-//       },
-//     })
-
-//     return response.data.recommendations
-//   } catch (error: any) {
-//     console.error("Failed to fetch personalized recommendations:", error.response?.data || error.message)
-//     // Fallback to basic recommendations
-//     return getRecommendations(mood)
-//   }
-// }
 
 // ============================================================================
 // API HEALTH CHECK
@@ -353,13 +345,43 @@ export function addToUserHistory(movie: MovieRecommendation) {
   const history = getUserHistory();
 
   const exists = history.find((m) => m.title === movie.title);
-  let newHistory = exists
-    ? [movie, ...history.filter((m) => m.title !== movie.title)]
-    : [movie, ...history];
+  let newHistory = exists ? [movie, ...history.filter((m) => m.title !== movie.title)] : [movie, ...history];
 
   if (newHistory.length > MAX_HISTORY) {
     newHistory = newHistory.slice(0, MAX_HISTORY);
   }
 
   localStorage.setItem(USER_HISTORY_KEY, JSON.stringify(newHistory));
+}
+
+export async function addHardcodedHistory(): Promise<void> {
+  const movies = prompt(
+    "Enter your movie history (comma-separated):\nExample: Inception, The Matrix, Interstellar, The Dark Knight",
+  )
+
+  if (!movies) return
+
+  const movieList = movies
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean)
+
+  for (const movie of movieList) {
+    try {
+      await addToWatchHistory({
+        movie_id: `hardcoded_${Date.now()}_${Math.random()}`,
+        movie_name: movie,
+      })
+    } catch (error) {
+      console.error(`Failed to add ${movie}:`, error)
+    }
+  }
+}
+export async function addToWatchHistory(payload: WatchHistoryAddRequest): Promise<{ msg: string }> {
+  const res = await apiClient.post("/history/add", payload)
+  return res.data
+}
+export interface WatchHistoryAddRequest {
+  movie_id: string
+  movie_name: string
 }

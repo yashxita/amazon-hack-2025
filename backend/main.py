@@ -534,21 +534,24 @@ async def get_my_blend_invitations(user=Depends(get_current_user)):
     ]
 
 @app.get("/blends", response_model=List[BlendSummary])
-async def list_all_blends(user=Depends(get_current_user)):
-    # Get all blend membership records for this user
-    member_rows = await database.fetch_all(
-        blend_members.select().where(blend_members.c.user_id == user["id"])
+async def list_all_blends(
+    current_user: dict = Depends(get_current_user),   # enforce auth
+):
+    """
+    Return only the blends the caller has joined.
+    """
+    # current_user is guaranteed to be a dict with an 'id' field here
+    query = (
+        select(blends.c.code, blends.c.name)
+        .select_from(
+            blends.join(blend_members,
+                        blends.c.code == blend_members.c.blend_code)
+        )
+        .where(blend_members.c.user_id == current_user["id"])
     )
-    blend_codes = [row["blend_code"] for row in member_rows]
-    if not blend_codes:
-        return []
-    blends_query = blends.select().where(blends.c.code.in_(blend_codes))
-    blends_info = await database.fetch_all(blends_query)
-    # Only return blends that actually exist (ignore None)
-    return [
-        {"code": b["code"], "name": b["name"] or "Unnamed Blend"}
-        for b in blends_info if b["name"] is not None
-    ]
+
+    rows = await database.fetch_all(query)
+    return [BlendSummary(code=r.code, name=r.name) for r in rows]
 
 @app.get("/blend/{code}", response_model=BlendResponse)
 async def get_blend_details(code: str, user=Depends(get_current_user)):
