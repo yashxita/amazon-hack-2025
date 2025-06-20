@@ -5,4 +5,4 @@
 /artifacts/movies_dataframe.joblib
 /artifacts/content_sim.joblib
 /artifacts/mood_genre_mapping.joblib
-/users.db
+/users.db/

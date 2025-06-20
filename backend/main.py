@@ -93,6 +93,21 @@ class RecommendationResponse(BaseModel):
 class BlendCreateRequest(BaseModel):
     name: str  # blend name
 
+class BlendInviteRequest(BaseModel):
+    blend_code: str
+    user_id: str  # user to invite
+
+class BlendInvitationAction(BaseModel):
+    invitation_id: str
+    action: str  # "accept" or "decline"
+
+class BlendInvitationOut(BaseModel):
+    id: str
+    blend_code: str
+    invited_by_id: str
+    status: str
+    created_at: str
+
 class BlendJoinRequest(BaseModel):
     code: str
 
@@ -162,6 +177,16 @@ blend_members = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
     sqlalchemy.Column("blend_code", sqlalchemy.String, sqlalchemy.ForeignKey("blends.code")),
     sqlalchemy.Column("user_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
+)
+
+blend_invitations = sqlalchemy.Table(
+    "blend_invitations", metadata,
+    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
+    sqlalchemy.Column("blend_code", sqlalchemy.String, sqlalchemy.ForeignKey("blends.code")),
+    sqlalchemy.Column("invited_user_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
+    sqlalchemy.Column("invited_by_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
+    sqlalchemy.Column("status", sqlalchemy.String, default="pending"),  # "pending", "accepted", "declined"
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, default=datetime.utcnow)
 )
 
 engine = sqlalchemy.create_engine(DATABASE_URL.replace("aiosqlite", "pysqlite"))
@@ -375,6 +400,63 @@ async def create_blend_session(request: BlendCreateRequest, user=Depends(get_cur
         "overall_match_score": ""
     }
 
+@app.post("/blend/invite")
+async def invite_to_blend(request: BlendInviteRequest, user=Depends(get_current_user)):
+    # Check blend exists and user is a member
+    blend = await database.fetch_one(blends.select().where(blends.c.code == request.blend_code))
+    if not blend:
+        raise HTTPException(status_code=404, detail="Blend not found")
+    member = await database.fetch_one(
+        blend_members.select().where(
+            (blend_members.c.blend_code == request.blend_code) & (blend_members.c.user_id == user["id"])
+        )
+    )
+    if not member:
+        raise HTTPException(status_code=403, detail="You are not a member of this blend")
+    # Check user to invite exists
+    invited_user = await database.fetch_one(users.select().where(users.c.id == request.user_id))
+    if not invited_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Create invitation
+    invite_id = str(uuid.uuid4())
+    await database.execute(blend_invitations.insert().values(
+        id=invite_id,
+        blend_code=request.blend_code,
+        invited_user_id=request.user_id,
+        invited_by_id=user["id"],
+        status="pending",
+        created_at=datetime.utcnow()
+    ))
+    return {"msg": "Invitation sent"}
+
+@app.post("/blend/invitation/respond")
+async def respond_to_blend_invitation(request: BlendInvitationAction, user=Depends(get_current_user)):
+    # Fetch invitation
+    invite = await database.fetch_one(
+        blend_invitations.select().where(
+            (blend_invitations.c.id == request.invitation_id) &
+            (blend_invitations.c.invited_user_id == user["id"])
+        )
+    )
+    if not invite or invite["status"] != "pending":
+        raise HTTPException(status_code=404, detail="Invitation not found or already handled")
+    # Update status
+    await database.execute(
+        blend_invitations.update()
+        .where(blend_invitations.c.id == request.invitation_id)
+        .values(status=request.action)
+    )
+    if request.action == "accept":
+        # Add user to blend_members
+        await database.execute(
+            blend_members.insert().values(
+                id=str(uuid.uuid4()),
+                blend_code=invite["blend_code"],
+                user_id=user["id"]
+            )
+        )
+    return {"msg": "Invitation {}".format(request.action)}
+
 @app.post("/blend/join", response_model=BlendResponse)
 async def join_blend_session(request: BlendJoinRequest, user=Depends(get_current_user)):
     # 1. Check if blend exists
@@ -430,6 +512,26 @@ async def join_blend_session(request: BlendJoinRequest, user=Depends(get_current
         "recommendations": recommendations,
         "overall_match_score": overall_match_score
     }
+
+@app.get("/blend/invitations", response_model=List[BlendInvitationOut])
+async def get_my_blend_invitations(user=Depends(get_current_user)):
+    # Query all pending invitations for the current user
+    query = blend_invitations.select().where(
+        (blend_invitations.c.invited_user_id == user["id"]) &
+        (blend_invitations.c.status == "pending")
+    )
+    invites = await database.fetch_all(query)
+    # Format the results as a list of dicts
+    return [
+        {
+            "id": inv["id"],
+            "blend_code": inv["blend_code"],
+            "invited_by_id": inv["invited_by_id"],
+            "status": inv["status"],
+            "created_at": inv["created_at"].isoformat() if inv["created_at"] else None
+        }
+        for inv in invites
+    ]
 
 @app.get("/blends", response_model=List[BlendSummary])
 async def list_all_blends(user=Depends(get_current_user)):
