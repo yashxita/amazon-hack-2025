@@ -90,6 +90,13 @@ class MovieRecommendation(BaseModel):
 class RecommendationResponse(BaseModel):
     recommendations: List[MovieRecommendation]
 
+class HistoryRecommendationRequest(BaseModel):
+    top_n: int = 10
+
+class HistoryRecommendationResponse(BaseModel):
+    recommendations: List[MovieRecommendation]
+    overall_match_score: str
+
 class BlendCreateRequest(BaseModel):
     name: str  # blend name
 
@@ -189,7 +196,8 @@ blend_invitations = sqlalchemy.Table(
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, default=datetime.utcnow)
 )
 
-engine = sqlalchemy.create_engine(DATABASE_URL.replace("aiosqlite", "pysqlite"))
+#engine = sqlalchemy.create_engine(DATABASE_URL.replace("aiosqlite", "pysqlite"))
+engine = sqlalchemy.create_engine(DATABASE_URL)
 metadata.create_all(engine)
 
 # === Security Helpers ===
@@ -210,11 +218,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        
         query = users.select().where(users.c.id == user_id)
-        return await database.fetch_one(query)
+        user = await database.fetch_one(query)
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        return user
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token signature")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Auth error: {str(e)}")
+
 
 # === Startup/Shutdown ===
 @app.on_event("startup")
@@ -258,7 +274,7 @@ async def read_users_me(user=Depends(get_current_user)):
 
 # === Recommendation Routes ===
 @app.post("/recommend", response_model=RecommendationResponse)
-async def get_recommendations(request: RecommendationRequest, user=Depends(get_current_user)):
+async def recommend_by_mood(request: RecommendationRequest, user=Depends(get_current_user)):
     # Fetch the user's watch history from the DB
     movie_rows = await database.fetch_all(
         watch_history.select()
@@ -284,6 +300,42 @@ async def get_recommendations(request: RecommendationRequest, user=Depends(get_c
                     "id":row['Movie_id']
                 } for _, row in df.iterrows()
             ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    
+from model import recommend_for_user
+
+@app.post("/recommend/history", response_model=HistoryRecommendationResponse)
+async def recommend_by_history(request: HistoryRecommendationRequest, user=Depends(get_current_user)):
+    # Fetch user's watch history from DB
+    movie_rows = await database.fetch_all(
+        watch_history.select()
+        .where(watch_history.c.user_id == user["id"])
+        .order_by(watch_history.c.watched_at.desc())
+    )
+    user_history = [m["movie_name"] for m in movie_rows]
+
+    try:
+        recs = recommend_for_user(user_history, top_n=request.top_n)
+        if isinstance(recs, list):
+            # No recommendations, return empty list and default score
+            recommendations = []
+            overall_match_score = "0%"
+        else:
+            recommendations = recs.get("user_recommendations", [])
+            overall_match_score = recs.get("overall_match_score", "0%")
+        return {
+            "recommendations": [
+                {
+                    "title": r["title"],
+                    "score": r["match_score"],
+                    "genres": r["genres"],
+                    "poster_path": r["poster_path"],
+                    "release_date": r["release_date"]
+                } for r in recommendations
+            ],
+            "overall_match_score": overall_match_score
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

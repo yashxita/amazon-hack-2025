@@ -1,39 +1,27 @@
 "use client"
 
-import React, {
-  useState,
-  useEffect,
-  type FormEvent,
-  type MouseEvent,
-} from "react"
+import { useState, useEffect, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import {
-  Users,
-  Copy,
-  RefreshCw,
-  Plus,
-  LogIn,
-  ExternalLink,
-  Trash2,
-} from "lucide-react"
+import { Users, Copy, RefreshCw, Plus, LogIn, ExternalLink, Trash2 } from "lucide-react"
 
 import {
   createBlend,
   joinBlend,
   listBlends,
-  deleteBlend,
   getBlend,
   getCurrentUser,
+  deleteBlend,
   addHardcodedHistory,
   type BlendResponse,
   type BlendSummary,
   type User,
 } from "../../../services/api"
+import axios from "axios"
 
 /* ───────── helpers ───────── */
 
@@ -68,17 +56,7 @@ const cacheBlend = (blend: BlendSummary) => {
     const existing = getLocalBlends().filter((b) => b.code !== blend.code)
     localStorage.setItem(LOCAL_BLENDS_KEY, JSON.stringify([blend, ...existing]))
   } catch {
-    /* ignore — localStorage may be unavailable */
-  }
-}
-
-/** remove a blend from cache */
-const removeCachedBlend = (code: string) => {
-  try {
-    const remaining = getLocalBlends().filter((b) => b.code !== code)
-    localStorage.setItem(LOCAL_BLENDS_KEY, JSON.stringify(remaining))
-  } catch {
-    /* ignore */
+    /* ignore — localStorage may be unavailable (e.g. private mode) */
   }
 }
 
@@ -89,17 +67,14 @@ export default function BlendPage() {
 
   // State management
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+  // seed with anything that was cached offline
   const [blends, setBlends] = useState<BlendSummary[]>(getLocalBlends())
-  const [blendDetails, setBlendDetails] = useState<
-    Record<string, BlendResponse>
-  >({})
+  const [blendDetails, setBlendDetails] = useState<Record<string, BlendResponse>>({})
 
   // Loading states
   const [creating, setCreating] = useState(false)
   const [joining, setJoining] = useState(false)
-  const [loadingBlends, setLoadingBlends] = useState<Record<string, boolean>>(
-    {},
-  )
+  const [loadingBlends, setLoadingBlends] = useState<Record<string, boolean>>({})
 
   // Form inputs
   const [blendName, setBlendName] = useState("")
@@ -108,9 +83,15 @@ export default function BlendPage() {
   // Error handling
   const [error, setError] = useState<string | null>(null)
 
-  /* ───────── lifecycle ───────── */
+  // Initialize component
+   useEffect(() => {
+    /* 1️⃣  Guarantee the header is there before we call anything */
+    const token = localStorage.getItem("token")
+    if (token && !axios.defaults.headers.common["Authorization"]) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`
+    }
 
-  useEffect(() => {
+    /* 2️⃣  Now we can safely hit protected endpoints        */
     const init = async () => {
       try {
         const user = await getCurrentUser()
@@ -124,48 +105,52 @@ export default function BlendPage() {
         )
       }
     }
+
     init()
   }, [])
 
   // Auto-refresh blends every 15 seconds
   useEffect(() => {
     if (!currentUser) return
-    const interval = setInterval(() => fetchBlends(), 15_000)
+    const interval = setInterval(() => fetchBlends(), 15000)
     return () => clearInterval(interval)
   }, [currentUser])
 
-  /* ───────── data helpers ───────── */
-
   const fetchBlends = async () => {
+    // always start with whatever is cached
     const local = getLocalBlends()
     try {
       const remote = await listBlends()
+      // merge cached + remote, de-duping by code
       const merged = [...remote]
       local.forEach((b) => {
         if (!merged.some((r) => r.code === b.code)) merged.push(b)
       })
       setBlends(merged)
-      merged.forEach((b) => fetchBlendDetails(b.code))
-    } catch (err) {
+
+      // Fetch details for each blend
+      for (const blend of merged) {
+        fetchBlendDetails(blend.code)
+      }
+    } catch (err: any) {
       console.error("Failed to fetch blends:", err)
-      setBlends(local) // fall back to cache
+      // if offline keep showing cached list
+      setBlends(local)
     }
   }
 
   const fetchBlendDetails = async (code: string) => {
     if (loadingBlends[code]) return
-    setLoadingBlends((p) => ({ ...p, [code]: true }))
+    setLoadingBlends((prev) => ({ ...prev, [code]: true }))
     try {
       const details = await getBlend(code)
-      setBlendDetails((p) => ({ ...p, [code]: details }))
-    } catch (err) {
+      setBlendDetails((prev) => ({ ...prev, [code]: details }))
+    } catch (err: any) {
       console.error(`Failed to fetch details for blend ${code}:`, err)
     } finally {
-      setLoadingBlends((p) => ({ ...p, [code]: false }))
+      setLoadingBlends((prev) => ({ ...prev, [code]: false }))
     }
   }
-
-  /* ───────── handlers ───────── */
 
   const handleCreateBlend = async (e: FormEvent) => {
     e.preventDefault()
@@ -182,7 +167,9 @@ export default function BlendPage() {
       cacheBlend({ code: newBlend.blend_code, name: blendName.trim() })
       setBlendName("")
       await fetchBlends()
+
       notify("Blend Created!", `Your blend "${blendName}" has been created.`)
+
       router.push(`/blend/${newBlend.blend_code}`)
     } catch (err: any) {
       const errorMsg = err.message || "Failed to create blend"
@@ -208,37 +195,17 @@ export default function BlendPage() {
       cacheBlend({ code: joinedBlend.blend_code, name: joinedBlend.name })
       setJoinCode("")
       await fetchBlends()
+
       notify("Joined Blend!", `Successfully joined blend: ${joinedBlend.blend_code}`)
+
       router.push(`/blend/${joinedBlend.blend_code}`)
     } catch (err: any) {
       const errorMsg =
-        err.response?.status === 404
-          ? "Blend code not found"
-          : err.message || "Failed to join blend"
+        err.response?.status === 404 ? "Blend code not found" : err.message || "Failed to join blend"
       setError(errorMsg)
       notify("Join Failed", errorMsg)
     } finally {
       setJoining(false)
-    }
-  }
-
-  const handleDeleteBlend = async (
-    e: MouseEvent<HTMLButtonElement>,
-    code: string,
-  ) => {
-    e.stopPropagation()
-    if (!confirm("Delete this blend permanently?")) return
-    setLoadingBlends((p) => ({ ...p, [code]: true }))
-    try {
-      await deleteBlend(code)
-      removeCachedBlend(code)
-      setBlends((p) => p.filter((b) => b.code !== code))
-      notify("Deleted", "Blend removed.")
-    } catch (err: any) {
-      console.error("Failed to delete blend:", err)
-      notify("Delete Failed", err.message || "Could not delete blend")
-    } finally {
-      setLoadingBlends((p) => ({ ...p, [code]: false }))
     }
   }
 
@@ -256,7 +223,7 @@ export default function BlendPage() {
       await addHardcodedHistory()
       notify(
         "History Added!",
-        "Your movie history has been added. Blend recommendations will update shortly.",
+        "Your movie history has been added. Blend recommendations will update shortly."
       )
       setTimeout(() => fetchBlends(), 2000)
     } catch {
@@ -272,9 +239,7 @@ export default function BlendPage() {
         <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center">
             <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
-            <p className="text-gray-600 mb-6">
-              Please login to access blend functionality.
-            </p>
+            <p className="text-gray-600 mb-6">Please login to access blend functionality.</p>
             <Button onClick={() => router.push("/login")} className="w-full">
               Go to Login
             </Button>
@@ -289,15 +254,9 @@ export default function BlendPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-black text-white mb-4 tracking-tight">
-            🎭 BLEND MODE
-          </h1>
-          <p className="text-gray-400 text-xl">
-            Create shared movie recommendations with friends
-          </p>
-          <p className="text-gray-500 text-sm mt-2">
-            Welcome back, {currentUser.username}!
-          </p>
+          <h1 className="text-5xl font-black text-white mb-4 tracking-tight">🎭 BLEND MODE</h1>
+          <p className="text-gray-400 text-xl">Create shared movie recommendations with friends</p>
+          <p className="text-gray-500 text-sm mt-2">Welcome back, {currentUser.username}!</p>
         </div>
 
         {/* Add History Banner */}
@@ -306,17 +265,10 @@ export default function BlendPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-white font-semibold text-lg">
-                    Improve Your Recommendations
-                  </h3>
-                  <p className="text-gray-300">
-                    Add your movie history to get better blend results
-                  </p>
+                  <h3 className="text-white font-semibold text-lg">Improve Your Recommendations</h3>
+                  <p className="text-gray-300">Add your movie history to get better blend results</p>
                 </div>
-                <Button
-                  onClick={handleAddHistory}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
+                <Button onClick={handleAddHistory} className="bg-blue-600 hover:bg-blue-700">
                   <Plus className="w-4 h-4 mr-2" />
                   Add History
                 </Button>
@@ -344,11 +296,7 @@ export default function BlendPage() {
                   className="bg-gray-900 border-gray-700 text-white"
                   disabled={creating}
                 />
-                <Button
-                  type="submit"
-                  className="w-full bg-red-600 hover:bg-red-700"
-                  disabled={creating}
-                >
+                <Button type="submit" className="w-full bg-red-600 hover:bg-red-700" disabled={creating}>
                   {creating ? "Creating..." : "Create Blend"}
                 </Button>
               </form>
@@ -395,9 +343,7 @@ export default function BlendPage() {
         {/* Your Blends */}
         {blends.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-6">
-              Your Blends
-            </h2>
+            <h2 className="text-2xl font-bold text-white mb-6">Your Blends</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {blends.map((blend) => {
                 const details = blendDetails[blend.code]
@@ -412,17 +358,10 @@ export default function BlendPage() {
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
-                          <h3 className="text-white font-bold text-lg mb-1 truncate">
-                            {blend.name}
-                          </h3>
-                          <p className="text-gray-400 text-sm font-mono">
-                            {blend.code}
-                          </p>
+                          <h3 className="text-white font-bold text-lg mb-1 truncate">{blend.name}</h3>
+                          <p className="text-gray-400 text-sm font-mono">{blend.code}</p>
                         </div>
-
-                        {/* action buttons */}
                         <div className="flex gap-2">
-                          {/* copy */}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -434,8 +373,6 @@ export default function BlendPage() {
                           >
                             <Copy className="w-4 h-4" />
                           </Button>
-
-                          {/* open */}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -447,25 +384,9 @@ export default function BlendPage() {
                           >
                             <ExternalLink className="w-4 h-4" />
                           </Button>
-
-                          {/* delete */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => handleDeleteBlend(e, blend.code)}
-                            className="text-gray-400 hover:text-red-500 p-1"
-                            disabled={isLoading}
-                          >
-                            {isLoading ? (
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
-                          </Button>
                         </div>
                       </div>
 
-                      {/* card body */}
                       {isLoading ? (
                         <div className="flex items-center justify-center py-8">
                           <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
@@ -475,9 +396,9 @@ export default function BlendPage() {
                           {/* Members */}
                           <div className="flex items-center gap-3">
                             <div className="flex -space-x-2">
-                              {details.users.slice(0, 4).map((username, i) => (
+                              {details.users.slice(0, 4).map((username, index) => (
                                 <Avatar
-                                  key={`${username}-${i}`}
+                                  key={`${username}-${index}`}
                                   className="border-2 border-gray-600 w-8 h-8 bg-gray-700"
                                 >
                                   <AvatarFallback className="bg-gray-700 text-white font-bold text-xs">
@@ -487,15 +408,12 @@ export default function BlendPage() {
                               ))}
                               {details.users.length > 4 && (
                                 <div className="w-8 h-8 bg-gray-600 border-2 border-gray-600 rounded-full flex items-center justify-center">
-                                  <span className="text-white text-xs font-bold">
-                                    +{details.users.length - 4}
-                                  </span>
+                                  <span className="text-white text-xs font-bold">+{details.users.length - 4}</span>
                                 </div>
                               )}
                             </div>
                             <span className="text-gray-400 text-sm">
-                              {details.users.length} member
-                              {details.users.length !== 1 ? "s" : ""}
+                              {details.users.length} member{details.users.length !== 1 ? "s" : ""}
                             </span>
                           </div>
 
@@ -505,23 +423,16 @@ export default function BlendPage() {
                               {details.users.length >= 2 ? (
                                 <>
                                   <Badge className="bg-green-600 text-white">
-                                    {details.recommendations.length}{" "}
-                                    recommendations
+                                    {details.recommendations.length} recommendations
                                   </Badge>
                                   {details.overall_match_score && (
-                                    <Badge
-                                      variant="outline"
-                                      className="text-gray-300"
-                                    >
+                                    <Badge variant="outline" className="text-gray-300">
                                       {details.overall_match_score} match
                                     </Badge>
                                   )}
                                 </>
                               ) : (
-                                <Badge
-                                  variant="outline"
-                                  className="text-yellow-400 border-yellow-400"
-                                >
+                                <Badge variant="outline" className="text-yellow-400 border-yellow-400">
                                   Waiting for members
                                 </Badge>
                               )}
@@ -548,9 +459,7 @@ export default function BlendPage() {
               <Users className="w-12 h-12 text-gray-600" />
             </div>
             <h3 className="text-xl text-white mb-2">No blends yet</h3>
-            <p className="text-gray-400 mb-6">
-              Create your first blend or join one with a code
-            </p>
+            <p className="text-gray-400 mb-6">Create your first blend or join one with a code</p>
           </div>
         )}
       </div>

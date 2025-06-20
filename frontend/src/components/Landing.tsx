@@ -89,7 +89,7 @@ export default function Landing() {
                         variant="ghost"
                         onClick={() => router.push("/blend")}   // <— go to /blend
                         className={`text-white hover:text-red-400 font-semibold tracking-wide ${
-                          pathname.startsWith("/blend")  ? "text-red-400" : ""
+                          pathname.startsWith() === "/blend" ? "text-red-400" : ""
                         }`}
                       >
                         BLEND
