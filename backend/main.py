@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict
 from dotenv import load_dotenv
 import databases, sqlalchemy, joblib, asyncio, os, uuid
-from sqlalchemy import UniqueConstraint
 import sqlalchemy
 from datetime import datetime
 
@@ -109,10 +108,6 @@ class BlendResponse(BaseModel):
     recommendations: List[BlendRecommendation]
     overall_match_score: str
 
-class BlendInviteRequest(BaseModel):
-    blend_code: str
-    user_id: str  # user to invite
-
 class BlendSummary(BaseModel):
     code: str
     name: str
@@ -160,7 +155,6 @@ blends = sqlalchemy.Table(
     sqlalchemy.Column("code", sqlalchemy.String, primary_key=True),
     sqlalchemy.Column("creator_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
     sqlalchemy.Column("name", sqlalchemy.String, nullable=False),
-    UniqueConstraint("name", name="uq_blend_name")
 )
 
 blend_members = sqlalchemy.Table(
@@ -168,7 +162,6 @@ blend_members = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
     sqlalchemy.Column("blend_code", sqlalchemy.String, sqlalchemy.ForeignKey("blends.code")),
     sqlalchemy.Column("user_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
-    sqlalchemy.Column("invited_by", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
 )
 
 engine = sqlalchemy.create_engine(DATABASE_URL.replace("aiosqlite", "pysqlite"))
@@ -363,14 +356,6 @@ async def delete_watchlist(group_id: str, user=Depends(get_current_user)):
 # === Blend Routes ===
 @app.post("/blend/create", response_model=BlendResponse)
 async def create_blend_session(request: BlendCreateRequest, user=Depends(get_current_user)):
-    # Check for duplicate blend name (case-insensitive)
-    query = blends.select().where(
-        (blends.c.creator_id == user["id"]) &
-        (sqlalchemy.func.lower(blends.c.name) == request.name.lower())
-    )
-    existing = await database.fetch_one(query)
-    if existing:
-        raise HTTPException(status_code=400, detail="Blend with this name already exists.")
     code = str(uuid.uuid4())[:8]
     await database.execute(blends.insert().values(
         code=code,
@@ -380,8 +365,7 @@ async def create_blend_session(request: BlendCreateRequest, user=Depends(get_cur
     await database.execute(blend_members.insert().values(
         id=str(uuid.uuid4()),
         blend_code=code,
-        user_id=user["id"],
-        invited_by=user["id"]
+        user_id=user["id"]
     ))
     return {
         "blend_code": code,
@@ -391,38 +375,16 @@ async def create_blend_session(request: BlendCreateRequest, user=Depends(get_cur
         "overall_match_score": ""
     }
 
-@app.post("/blend/invite")
-async def invite_to_blend(request: BlendInviteRequest, user=Depends(get_current_user)):
-    # Allow any existing member to invite
-    member = await database.fetch_one(
-        blend_members.select().where(
-            (blend_members.c.blend_code == request.blend_code) &
-            (blend_members.c.user_id == user["id"])
-        )
-    )
-    if not member:
-        raise HTTPException(status_code=403, detail="Only blend members can invite.")
-
-    already_invited = await database.fetch_one(
-        blend_members.select().where(
-            (blend_members.c.blend_code == request.blend_code) &
-            (blend_members.c.user_id == request.user_id)
-        )
-    )
-    if already_invited:
-        raise HTTPException(status_code=400, detail="User already invited to this blend.")
-
-    await database.execute(blend_members.insert().values(
-        id=str(uuid.uuid4()),
-        blend_code=request.blend_code,
-        user_id=request.user_id,
-        invited_by=user["id"]
-    ))
-    return {"msg": "User invited"}
-
 @app.post("/blend/join", response_model=BlendResponse)
 async def join_blend_session(request: BlendJoinRequest, user=Depends(get_current_user)):
-    # 1. Check if user is a member (invited)
+    # 1. Check if blend exists
+    blend = await database.fetch_one(
+        blends.select().where(blends.c.code == request.code)
+    )
+    if not blend:
+        raise HTTPException(status_code=404, detail="Blend not found.")
+
+    # 2. Check if user is already a member
     member = await database.fetch_one(
         blend_members.select().where(
             (blend_members.c.blend_code == request.code) &
@@ -430,20 +392,24 @@ async def join_blend_session(request: BlendJoinRequest, user=Depends(get_current
         )
     )
     if not member:
-        raise HTTPException(status_code=403, detail="You are not invited to this blend.")
+        # Add user as a member
+        await database.execute(
+            blend_members.insert().values(
+                id=str(uuid.uuid4()),
+                blend_code=request.code,
+                user_id=user["id"]
+            )
+        )
 
-    # 2. Get all user_ids in this blend
+    # 3. Fetch all members and build blend response as before
     members = await database.fetch_all(
         blend_members.select().where(blend_members.c.blend_code == request.code)
     )
     user_ids = [m["user_id"] for m in members]
-
-    # 3. For each user, get their watch history (all movie_names from watch_history)
     user_histories = []
     user_tags = {}
     usernames = []
     for uid in user_ids:
-        # Fetch all watched movies for this user, ordered by most recent
         movie_rows = await database.fetch_all(
             watch_history.select()
             .where(watch_history.c.user_id == uid)
@@ -451,17 +417,12 @@ async def join_blend_session(request: BlendJoinRequest, user=Depends(get_current
         )
         history = [m["movie_name"] for m in movie_rows]
         user_histories.append(history)
-        # Assign tag for this user
         user_tags[uid] = assign_tag_from_movie_history(history)
-        # Get username
         u = await database.fetch_one(users.select().where(users.c.id == uid))
         usernames.append(u["username"] if u else uid)
-
-    # 4. Call recommend_blend with all user histories
     recs = recommend_blend(user_histories)
     recommendations = recs.get("blend_recommendations", []) if isinstance(recs, dict) else recs
     overall_match_score = recs.get("overall_match_score", "0%") if isinstance(recs, dict) else "0%"
-
     return {
         "blend_code": request.code,
         "users": usernames,
