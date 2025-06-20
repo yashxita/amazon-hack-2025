@@ -196,7 +196,8 @@ blend_invitations = sqlalchemy.Table(
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, default=datetime.utcnow)
 )
 
-engine = sqlalchemy.create_engine(DATABASE_URL.replace("aiosqlite", "pysqlite"))
+#engine = sqlalchemy.create_engine(DATABASE_URL.replace("aiosqlite", "pysqlite"))
+engine = sqlalchemy.create_engine(DATABASE_URL)
 metadata.create_all(engine)
 
 # === Security Helpers ===
