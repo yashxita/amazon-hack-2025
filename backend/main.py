@@ -75,6 +75,8 @@ class WatchHistoryItem(BaseModel):
     movie_id: str
     movie_name: str
     watched_at: str  # ISO format string
+    poster_path: str
+    release_date: str
 
 class RecommendationRequest(BaseModel):
     mood: str
@@ -196,7 +198,6 @@ blend_invitations = sqlalchemy.Table(
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, default=datetime.utcnow)
 )
 
-#engine = sqlalchemy.create_engine(DATABASE_URL.replace("aiosqlite", "pysqlite"))
 engine = sqlalchemy.create_engine(DATABASE_URL)
 metadata.create_all(engine)
 
@@ -671,33 +672,50 @@ async def delete_blend(code: str, user=Depends(get_current_user)):
 # === Watch History Routes ===
 @app.post("/history/add")
 async def add_to_watch_history(request: WatchHistoryAddRequest, user=Depends(get_current_user)):
-    entry_id = str(uuid.uuid4())
-    await database.execute(
-        watch_history.insert().values(
-            id=entry_id,
-            user_id=user["id"],
-            movie_id=request.movie_id,
-            movie_name=request.movie_name,
-            watched_at=datetime.utcnow()
-        )
+    # Remove any previous instance of this movie for this user
+    delete_query = watch_history.delete().where(
+        (watch_history.c.user_id == user["id"]) &
+        (watch_history.c.movie_id == request.movie_id)
     )
+    await database.execute(delete_query)
+
+    # Add the new (most recent) watch history entry
+    entry_id = str(uuid.uuid4())
+    insert_query = watch_history.insert().values(
+        id=entry_id,
+        user_id=user["id"],
+        movie_id=request.movie_id,
+        movie_name=request.movie_name,
+        watched_at=datetime.utcnow()
+    )
+    await database.execute(insert_query)
+
     return {"msg": "Added to watch history"}
 
 @app.get("/history", response_model=List[WatchHistoryItem])
 async def get_watch_history(user=Depends(get_current_user)):
-    # Fetch watch history for the current user, most recent first
     query = watch_history.select().where(
         watch_history.c.user_id == user["id"]
     ).order_by(watch_history.c.watched_at.desc())
     rows = await database.fetch_all(query)
-    return [
-        {
+    history = []
+    for row in rows:
+        poster_path = ""
+        release_date = ""
+        movie_id = str(row["movie_id"]).strip()
+        # Ensure both sides are string and stripped
+        movie_meta_row = movies[movies['Movie_id'].astype(str).str.strip() == movie_id]
+        if not movie_meta_row.empty:
+            poster_path = movie_meta_row.iloc[0].get("poster_path", "")
+            release_date = movie_meta_row.iloc[0].get("release_date", "")
+        history.append({
             "movie_id": row["movie_id"],
             "movie_name": row["movie_name"],
-            "watched_at": row["watched_at"].isoformat() if row["watched_at"] else None
-        }
-        for row in rows
-    ]
+            "watched_at": row["watched_at"].isoformat() if row["watched_at"] else None,
+            "poster_path": poster_path,
+            "release_date": release_date
+        })
+    return history
 
 @app.get("/")
 def read_root():
