@@ -69,7 +69,6 @@ export default function BlendDetailPage() {
       setRefreshing(false)
     }
   }
-  console.log
 
   const copyBlendCode = async () => {
     try {
@@ -80,13 +79,40 @@ export default function BlendDetailPage() {
     }
   }
 
+  const handleAddHistory = async () => {
+    const movies = prompt(
+      "Enter your movie history (comma-separated):\nExample: Inception, The Matrix, Interstellar, The Dark Knight",
+    )
+
+    if (!movies) return
+
+    const movieList = movies
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean)
+
+    try {
+      for (const movie of movieList) {
+        await addToWatchHistory({
+          movie_id: `manual_${Date.now()}_${Math.random()}`,
+          movie_name: movie,
+        })
+      }
+      toast.success("Movie history added! Refreshing blend...")
+      setTimeout(() => loadBlend(true), 1000)
+    } catch (error) {
+      toast.error("Failed to add movie history")
+    }
+  }
+
+  /* ───────── render ───────── */
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white">Loading blend...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-400 mx-auto mb-4 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]"></div>
+          <p className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">Loading blend...</p>
         </div>
       </div>
     )
@@ -94,12 +120,15 @@ export default function BlendDetailPage() {
 
   if (error || !blend) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Card className="w-full max-w-md bg-black border-2 border-red-500/50 shadow-2xl shadow-red-500/20">
           <CardContent className="p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4 text-red-400">Error</h2>
+            <h2 className="text-2xl font-bold mb-4 text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">Error</h2>
             <p className="text-gray-300 mb-6">{error || "Blend not found"}</p>
-            <Button onClick={() => router.push("/blend")} className="w-full">
+            <Button
+              onClick={() => router.push("/blend")}
+              className="w-full bg-red-500 hover:bg-red-600 border border-red-400 shadow-lg shadow-red-500/30 text-white font-bold"
+            >
               Back to Blends
             </Button>
           </CardContent>
@@ -109,46 +138,92 @@ export default function BlendDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 p-6">
+    <div className="min-h-screen bg-black p-6">
       <Toaster />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button size="sm" onClick={() => router.push("/blend")} className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/blend")}
+            className="flex items-center gap-2 text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400 shadow-lg shadow-blue-500/20"
+          >
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-white">Blend: {code}</h1>
-            <p className="text-gray-400">
-              {blend.users.length} member{blend.users.length !== 1 ? "s" : ""} • Match: {blend.overall_match_score}
+            <h1 className="text-4xl font-bold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+              Blend: <span className="text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">{code}</span>
+            </h1>
+            <p className="text-gray-300">
+              <span className="text-blue-400">{blend.users.length}</span> member{blend.users.length !== 1 ? "s" : ""} •
+              Match: <span className="text-red-400 font-bold">{blend.overall_match_score}</span>
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={copyBlendCode}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyBlendCode}
+              className="text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400 shadow-lg shadow-blue-500/20"
+            >
               <Copy className="w-4 h-4 mr-1" />
               Copy Code
             </Button>
-            <Button size="sm" onClick={() => loadBlend(true)} disabled={refreshing}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadBlend(true)}
+              disabled={refreshing}
+              className="text-red-400 border-red-500/50 hover:bg-red-500/10 hover:border-red-400 shadow-lg shadow-red-500/20"
+            >
               <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </div>
+
+        {/* Add History Button */}
+        <div className="mb-8">
+          <Card className="bg-black border-2 border-blue-500/50 shadow-2xl shadow-blue-500/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-blue-400 font-semibold drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]">
+                    Need better recommendations?
+                  </h3>
+                  <p className="text-gray-300 text-sm">Add your movie history to improve blend results</p>
+                </div>
+                <Button
+                  onClick={handleAddHistory}
+                  className="bg-blue-500 hover:bg-blue-600 border border-blue-400 shadow-lg shadow-blue-500/30 text-white font-bold"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add History
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="grid lg:grid-cols-3 gap-8">
+          {/* Members Panel */}
           <div className="lg:col-span-1">
-            <Card className="bg-gradient-to-br from-gray-800 to-gray-900 border-gray-600 shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Members ({blend.users.length})
+            <Card className="bg-black border-2 border-cyan-400/60 shadow-2xl shadow-cyan-400/20 hover:shadow-cyan-400/30 transition-all duration-300">
+              <CardHeader className="border-b border-cyan-400/30">
+                <CardTitle className="text-white flex items-center gap-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                  <Users className="w-5 h-5 text-cyan-400" />
+                  Members (<span className="text-cyan-400">{blend.users.length}</span>)
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 p-6">
                 <div className="flex flex-wrap gap-3">
                   {blend.users.map((username, index) => (
                     <div key={`${username}-${index}`} className="flex flex-col items-center gap-2">
-                      <Avatar className="w-12 h-12 bg-gray-700 border-2 border-gray-600">
-                        <AvatarFallback className="text-white font-bold">{getInitials(username)}</AvatarFallback>
+                      <Avatar className="w-12 h-12 bg-gradient-to-br from-red-600 to-blue-600 border-2 border-cyan-400 shadow-lg shadow-cyan-500/30">
+                        <AvatarFallback className="text-white font-bold bg-gradient-to-br from-red-600 to-blue-600">
+                          {getInitials(username)}
+                        </AvatarFallback>
                       </Avatar>
                       <span className="text-gray-300 text-xs text-center max-w-[60px] truncate">{username}</span>
                     </div>
@@ -156,13 +231,20 @@ export default function BlendDetailPage() {
                 </div>
 
                 {Object.keys(blend.user_tags).length > 0 && (
-                  <div className="pt-4 border-t border-gray-700">
-                    <h4 className="text-white font-semibold mb-3 text-sm">Preferences</h4>
+                  <div className="pt-4 border-t border-cyan-400/30">
+                    <h4 className="text-red-400 font-semibold mb-3 text-sm drop-shadow-[0_0_5px_rgba(239,68,68,0.3)]">
+                      Preferences
+                    </h4>
                     <div className="space-y-2">
                       {Object.entries(blend.user_tags).map(([userId, tag]) => (
-                        <div key={userId} className="flex items-center gap-2 p-2 bg-gray-900 rounded text-sm">
-                          <Avatar className="w-5 h-5 bg-gray-700">
-                            <AvatarFallback className="text-xs">{getInitials(userId)}</AvatarFallback>
+                        <div
+                          key={userId}
+                          className="flex items-center gap-2 p-2 bg-gray-900/50 border border-gray-700 rounded text-sm"
+                        >
+                          <Avatar className="w-5 h-5 bg-gradient-to-br from-blue-600 to-purple-600 border border-blue-500">
+                            <AvatarFallback className="text-xs bg-gradient-to-br from-blue-600 to-purple-600 text-white">
+                              {getInitials(userId)}
+                            </AvatarFallback>
                           </Avatar>
                           <span className="text-gray-300 truncate">{tag}</span>
                         </div>
@@ -171,62 +253,77 @@ export default function BlendDetailPage() {
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-gray-700">
-                  <h4 className="text-white font-semibold mb-2 text-sm">Invite Friends</h4>
+                <div className="pt-4 border-t border-cyan-400/30">
+                  <h4 className="text-blue-400 font-semibold mb-2 text-sm drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]">
+                    Invite Friends
+                  </h4>
                   <p className="text-gray-400 text-xs mb-2">Share this code:</p>
-                  <div className="bg-gray-900 p-2 rounded text-center">
-                    <code className="text-blue-400 font-mono">{code}</code>
+                  <div className="bg-black border-2 border-blue-500/50 p-3 rounded text-center shadow-lg shadow-blue-500/20">
+                    <code className="text-blue-400 font-mono text-lg drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                      {code}
+                    </code>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-          <div className="lg:col-span-2 ">
-            <Card className="flex-shrink-0 overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900 border-gray-600 shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-white">
+
+          {/* Recommendations Panel */}
+          <div className="lg:col-span-2">
+            <Card className="bg-black border-2 border-red-500/60 shadow-2xl shadow-red-500/20 hover:shadow-red-500/30 transition-all duration-300">
+              <CardHeader className="border-b border-red-500/30">
+                <CardTitle className="text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.3)]">
                   Blended Recommendations
                   {blend.users.length < 2 && (
                     <span className="text-gray-500 text-sm font-normal ml-2">(Need 2+ members)</span>
                   )}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 {blend.users.length < 2 ? (
                   <div className="text-center py-16 text-gray-500">
                     <Users className="w-20 h-20 mx-auto mb-6 opacity-30" />
-                    <h3 className="text-xl mb-2">Waiting for more members...</h3>
+                    <h3 className="text-xl mb-2 text-white">Waiting for more members...</h3>
                     <p className="text-sm mb-4">Share your blend code to get personalized recommendations</p>
-                    <div className="bg-gray-900 p-3 rounded-lg inline-block">
-                      <code className="text-blue-400 font-mono text-lg">{code}</code>
+                    <div className="bg-black border-2 border-blue-500/50 p-3 rounded-lg inline-block shadow-lg shadow-blue-500/20">
+                      <code className="text-blue-400 font-mono text-lg drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                        {code}
+                      </code>
                     </div>
                   </div>
                 ) : blend.recommendations.length === 0 ? (
                   <div className="text-center py-16 text-gray-500">
-                    <div className="w-20 h-20 mx-auto mb-6 bg-gray-800 rounded-full flex items-center justify-center">
-                      <RefreshCw className="w-10 h-10" />
+                    <div className="w-20 h-20 mx-auto mb-6 bg-gray-900 border-2 border-gray-700 rounded-full flex items-center justify-center shadow-lg">
+                      <RefreshCw className="w-10 h-10 text-red-400" />
                     </div>
-                    <h3 className="text-xl mb-2">No recommendations yet</h3>
+                    <h3 className="text-xl mb-2 text-white">No recommendations yet</h3>
                     <p className="text-sm mb-4">Make sure all members have added their movie history</p>
-                    
+                    <Button
+                      onClick={handleAddHistory}
+                      variant="outline"
+                      className="text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400"
+                    >
+                      Add Your History
+                    </Button>
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-6 justify-center">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {blend.recommendations.map((rec, index) => (
-                      <MovieCard
-                        key={`${rec.title}-${index}`}
-                        movie={{
-                          id: `blend_${index}`,
-                          title: rec.title,
-                          poster: rec.poster_path?.startsWith("http")
-                            ? rec.poster_path
-                            : `https://image.tmdb.org/t/p/w500${rec.poster_path}`,
-                          genre: rec.genres,
-                          score: (rec.match_score * 10).toFixed(1),
-                          year: "2024", // You might want to add release year to your blend recommendation data
-                          match: Math.round(rec.match_score * 100),
-                        }}
-                      />
+                      <div key={`${rec.title}-${index}`} className="flex justify-center">
+                        <MovieCard
+                          movie={{
+                            id: `blend_${index}`,
+                            title: rec.title,
+                            poster: rec.poster_path?.startsWith("http")
+                              ? rec.poster_path
+                              : `https://image.tmdb.org/t/p/w500${rec.poster_path}`,
+                            genre: rec.genres,
+                            score: (rec.match_score * 10).toFixed(1),
+                            year: "2024",
+                            match: Math.round(rec.match_score * 100),
+                          }}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}
