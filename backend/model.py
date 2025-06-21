@@ -146,6 +146,12 @@ recommend_movies_by_mood(
     top_n=10
 )
 
+def detect_mood(query):
+    for mood in mood_genre_mapping:
+        if mood in query.lower():
+            return mood
+    return None
+
 import uuid
 
 shared_blend_codes = {}
@@ -590,8 +596,21 @@ def enhanced_descriptive_recommendation(
 def handle_voice_search(audio_path, user_history_titles=None, top_n=5):
     user_query = transcribe_voice(audio_path)
     print("\nTranscribed text:", user_query)
-    recommendations = enhanced_descriptive_recommendation(
-        user_query, movies, tfidf, tfidf_matrix,
-        user_history_titles=user_history_titles, top_n=top_n
-    )
+    
+    # Detect mood from the query
+    mood = detect_mood(user_query)
+    
+    if mood:
+        # Use mood-based recommendation if a mood is detected
+        recommendations = recommend_movies_by_mood(
+            mood,
+            user_history_titles=user_history_titles,
+            top_n=top_n
+        )
+    else:
+        # Fallback to descriptive recommendation
+        recommendations = enhanced_descriptive_recommendation(
+            user_query, movies, tfidf, tfidf_matrix,
+            user_history_titles=user_history_titles, top_n=top_n
+        )
     return recommendations
