@@ -78,35 +78,6 @@ export default function BlendDetailPage() {
       toast.error("Could not copy to clipboard")
     }
   }
-
-  const handleAddHistory = async () => {
-    const movies = prompt(
-      "Enter your movie history (comma-separated):\nExample: Inception, The Matrix, Interstellar, The Dark Knight",
-    )
-
-    if (!movies) return
-
-    const movieList = movies
-      .split(",")
-      .map((m) => m.trim())
-      .filter(Boolean)
-
-    try {
-      for (const movie of movieList) {
-        await addToWatchHistory({
-          movie_id: `manual_${Date.now()}_${Math.random()}`,
-          movie_name: movie,
-        })
-      }
-      toast.success("Movie history added! Refreshing blend...")
-      setTimeout(() => loadBlend(true), 1000)
-    } catch (error) {
-      toast.error("Failed to add movie history")
-    }
-  }
-
-  /* ───────── render ───────── */
-
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -144,7 +115,6 @@ export default function BlendDetailPage() {
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button
-            variant="outline"
             size="sm"
             onClick={() => router.push("/blend")}
             className="flex items-center gap-2 text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400 shadow-lg shadow-blue-500/20"
@@ -163,7 +133,6 @@ export default function BlendDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
               size="sm"
               onClick={copyBlendCode}
               className="text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400 shadow-lg shadow-blue-500/20"
@@ -172,7 +141,6 @@ export default function BlendDetailPage() {
               Copy Code
             </Button>
             <Button
-              variant="outline"
               size="sm"
               onClick={() => loadBlend(true)}
               disabled={refreshing}
@@ -183,30 +151,7 @@ export default function BlendDetailPage() {
           </div>
         </div>
 
-        {/* Add History Button */}
-        <div className="mb-8">
-          <Card className="bg-black border-2 border-blue-500/50 shadow-2xl shadow-blue-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-blue-400 font-semibold drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]">
-                    Need better recommendations?
-                  </h3>
-                  <p className="text-gray-300 text-sm">Add your movie history to improve blend results</p>
-                </div>
-                <Button
-                  onClick={handleAddHistory}
-                  className="bg-blue-500 hover:bg-blue-600 border border-blue-400 shadow-lg shadow-blue-500/30 text-white font-bold"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add History
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-4 gap-8">
           {/* Members Panel */}
           <div className="lg:col-span-1">
             <Card className="bg-black border-2 border-cyan-400/60 shadow-2xl shadow-cyan-400/20 hover:shadow-cyan-400/30 transition-all duration-300">
@@ -233,22 +178,31 @@ export default function BlendDetailPage() {
                 {Object.keys(blend.user_tags).length > 0 && (
                   <div className="pt-4 border-t border-cyan-400/30">
                     <h4 className="text-red-400 font-semibold mb-3 text-sm drop-shadow-[0_0_5px_rgba(239,68,68,0.3)]">
-                      Preferences
+                      Member Preferences
                     </h4>
-                    <div className="space-y-2">
-                      {Object.entries(blend.user_tags).map(([userId, tag]) => (
-                        <div
-                          key={userId}
-                          className="flex items-center gap-2 p-2 bg-gray-900/50 border border-gray-700 rounded text-sm"
-                        >
-                          <Avatar className="w-5 h-5 bg-gradient-to-br from-blue-600 to-purple-600 border border-blue-500">
-                            <AvatarFallback className="text-xs bg-gradient-to-br from-blue-600 to-purple-600 text-white">
-                              {getInitials(userId)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-gray-300 truncate">{tag}</span>
-                        </div>
-                      ))}
+                    <div className="space-y-3">
+                      {blend.users.map((username, index) => {
+                        // Find the corresponding user ID and tag
+                        const userEntries = Object.entries(blend.user_tags)
+                        const userTag = userEntries[index]?.[1] || "No preferences yet"
+
+                        return (
+                          <div
+                            key={`${username}-${index}`}
+                            className="flex items-center gap-3 p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
+                          >
+                            <Avatar className="w-8 h-8 bg-gradient-to-br from-red-600 to-blue-600 border-2 border-cyan-400 shadow-lg shadow-cyan-500/30">
+                              <AvatarFallback className="text-white font-bold bg-gradient-to-br from-red-600 to-blue-600 text-xs">
+                                {getInitials(username)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-white font-medium text-sm">{username}</div>
+                              <div className="text-gray-400 text-xs truncate">{userTag}</div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -269,7 +223,7 @@ export default function BlendDetailPage() {
           </div>
 
           {/* Recommendations Panel */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <Card className="bg-black border-2 border-red-500/60 shadow-2xl shadow-red-500/20 hover:shadow-red-500/30 transition-all duration-300">
               <CardHeader className="border-b border-red-500/30">
                 <CardTitle className="text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.3)]">
@@ -298,16 +252,9 @@ export default function BlendDetailPage() {
                     </div>
                     <h3 className="text-xl mb-2 text-white">No recommendations yet</h3>
                     <p className="text-sm mb-4">Make sure all members have added their movie history</p>
-                    <Button
-                      onClick={handleAddHistory}
-                      variant="outline"
-                      className="text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400"
-                    >
-                      Add Your History
-                    </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     {blend.recommendations.map((rec, index) => (
                       <div key={`${rec.title}-${index}`} className="flex justify-center">
                         <MovieCard
