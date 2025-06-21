@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: amazon-hack-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: ./start.sh
+    autoDeploy: true
+    region: oregon
+    branch: main
+    plan: free
