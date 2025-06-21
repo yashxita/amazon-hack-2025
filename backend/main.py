@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Response, status
+from fastapi import FastAPI, HTTPException, Depends, Response, status , Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import databases, sqlalchemy, joblib, asyncio, os, uuid
 import sqlalchemy
 from datetime import datetime
+import pandas as pd
 
 from model import (
     recommend_movies_by_mood,
@@ -723,7 +724,18 @@ async def get_watch_history(user=Depends(get_current_user)):
 @app.get("/")
 def read_root():
     return {"message": "Movie Recommendation API is running."}
+    
+df = pd.read_csv('./data/10000 Movies Data')
+@app.get("/search")
+def search_movies(title: str = Query(..., description="Movie title to search")):
+    query = title.lower()
+    results = df[df['title'].str.lower().str.contains(query)]
 
+    if results.empty:
+        return {"message": "No movies found with that name."}
+
+    return results.to_dict(orient="records")
+    
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
