@@ -36,7 +36,6 @@ passlib==1.7.4
 psycopg2==2.9.10
 psycopg2-binary==2.9.10
 pyasn1==0.6.1
-PyAudio==0.2.14
 pycparser==2.22
 pydantic==2.11.7
 pydantic_core==2.33.2
