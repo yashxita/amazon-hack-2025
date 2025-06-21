@@ -20,6 +20,7 @@
     "@react-three/drei": "^10.3.0",
     "@react-three/fiber": "^9.1.2",
     "@react-three/postprocessing": "^3.0.4",
+    "@rive-app/react-canvas": "^4.21.3",
     "add": "^2.0.6",
     "axios": "^1.10.0",
     "class-variance-authority": "^0.7.1",

@@ -24,7 +24,6 @@ import {
   listBlends,
   getBlend,
   getCurrentUser,
-  addToWatchHistory,
   type BlendResponse,
   type BlendSummary,
   type User,
@@ -73,7 +72,7 @@ export default function BlendPage() {
         const user = await getCurrentUser();
         setCurrentUser(user);
         await fetchBlends();
-      } catch (err: any) {
+      } catch  {
         setError("Failed to load user info. Please login.");
         toast.error("Please login to access blend functionality.");
       }
@@ -180,35 +179,6 @@ export default function BlendPage() {
       toast.error("Could not copy to clipboard");
     }
   };
-
-  const handleAddHistory = async () => {
-    const movies = prompt(
-      "Enter your movie history (comma-separated):\nExample: Inception, The Matrix, Interstellar, The Dark Knight"
-    );
-
-    if (!movies) return;
-
-    const movieList = movies
-      .split(",")
-      .map((m) => m.trim())
-      .filter(Boolean);
-
-    try {
-      for (const movie of movieList) {
-        await addToWatchHistory({
-          movie_id: `manual_${Date.now()}_${Math.random()}`,
-          movie_name: movie,
-        });
-      }
-      toast.success("Movie history added successfully!");
-      setTimeout(() => fetchBlends(), 2000);
-    } catch (error) {
-      toast.error("Failed to add movie history");
-    }
-  };
-
-  /* ───────── render ───────── */
-
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">

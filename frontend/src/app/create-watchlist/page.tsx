@@ -402,7 +402,6 @@ export default function CreateWatchlistPage() {
                       </Label>
                       {localHistoryCount > 0 && (
                         <Badge
-                          
                           className="text-xs border-yellow-600 text-yellow-400"
                         >
                           {localHistoryCount} local

@@ -6,7 +6,7 @@ import {
   Fit,
   Alignment,
 } from '@rive-app/react-canvas';
-import { useEffect } from 'react';
+
 
 export default function FuseMode({ className = '' }: { className?: string }) {
   const { RiveComponent } = useRive({
