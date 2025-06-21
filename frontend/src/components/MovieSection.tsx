@@ -86,17 +86,17 @@ export default function MovieSection({
   };
 
   return (
-    <div className="mb-16 px-6 lg:px-12">
+    <div className="mb-16 ">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           {Icon && <Icon className="w-8 h-8 text-red-400" />}
           <h2 className="text-white text-3xl font-black tracking-wide">
-            {section.title}
+            {section.title==="Recently Watched"?"":section.title}
           </h2>
         </div>
         <div className="flex gap-2">
           <Button
-            variant="ghost"
+             
             size="icon"
             onClick={scrollLeft}
             disabled={!canScrollLeft}
@@ -109,7 +109,7 @@ export default function MovieSection({
             <ChevronLeft className="w-5 h-5" />
           </Button>
           <Button
-            variant="ghost"
+             
             size="icon"
             onClick={scrollRight}
             disabled={!canScrollRight}
@@ -127,7 +127,7 @@ export default function MovieSection({
       <div className="relative">
         <div
           ref={scrollRef}
-          className="flex gap-6 pb-4 overflow-x-auto scrollbar-hide"
+          className="flex gap-6 pb-4 overflow-x-auto scrollbar-hide py-8 px-4"
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
@@ -141,7 +141,7 @@ export default function MovieSection({
         {/* Additional overlay buttons for better UX */}
         {canScrollLeft && (
           <Button
-            variant="ghost"
+             
             size="icon"
             onClick={scrollLeft}
             className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/80 hover:bg-black/90 text-white hover:text-red-400 border border-gray-700 hover:border-red-500 backdrop-blur-sm w-12 h-12 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -152,7 +152,7 @@ export default function MovieSection({
 
         {canScrollRight && (
           <Button
-            variant="ghost"
+             
             size="icon"
             onClick={scrollRight}
             className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/80 hover:bg-black/90 text-white hover:text-red-400 border border-gray-700 hover:border-red-500 backdrop-blur-sm w-12 h-12 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"

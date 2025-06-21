@@ -176,8 +176,8 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
 
 export async function getCurrentUser(): Promise<User> {
   try {
-    const response = await apiClient.get<{ user: User }>("/me")
-    return response.data.user
+    const response = await apiClient.get<User>("/me")
+    return response.data
   } catch (error: any) {
     const errorMessage = error.response?.data?.error || "Failed to get user info"
     throw new Error(errorMessage)
@@ -203,74 +203,103 @@ export async function logout(): Promise<void> {
 
 // Interfaces returned by backend (see FastAPI Pydantic models)
 export interface BlendRecommendation {
-  poster_path: string;
-  title: string;
-  genres: string[];
-  match_score: number;
+  poster_path: string
+  title: string
+  genres: string[]
+  match_score: number
 }
 
 export interface BlendResponse {
-  name: string;
-  blend_code: string;
-  users: string[];
-  user_tags: Record<string, string>;
-  recommendations: BlendRecommendation[];
-  overall_match_score: string; // e.g. "87%"
+  name: string
+  blend_code: string
+  users: string[]
+  user_tags: Record<string, string>
+  recommendations: BlendRecommendation[]
+  overall_match_score: string // e.g. "87%"
 }
 
 export interface BlendSummary {
-  code: string;
-  name: string;
+  code: string
+  name: string
 }
 
 // ----------- Requests ------------
 export interface CreateBlendRequest {
-  name: string;
+  name: string
 }
 
 export interface InviteBlendRequest {
-  blend_code: string;
-  user_id: string;
+  blend_code: string
+  user_id: string
 }
 
 export interface JoinBlendRequest {
-  code: string;
+  code: string
 }
 
 export interface InviteBlendResponse {
-  msg: string;
+  msg: string
 }
 
 // ----------- API Calls -----------
 
 export async function createBlend(payload: CreateBlendRequest): Promise<BlendResponse> {
-  // correct FastAPI route is POST /blend/create
-  const res = await apiClient.post<BlendResponse>("/blend/create", payload);
-  return res.data;
+  try {
+    const res = await apiClient.post<BlendResponse>("/blend/create", payload)
+    return res.data
+  } catch (error: any) {
+    console.error("Failed to create blend:", error.response?.data || error.message)
+    throw new Error(error.response?.data?.detail || "Failed to create blend")
+  }
 }
 
 export async function inviteToBlend(payload: InviteBlendRequest): Promise<InviteBlendResponse> {
-  const res = await apiClient.post<InviteBlendResponse>("/blend/invite", payload);
-  return res.data;
+  try {
+    const res = await apiClient.post<InviteBlendResponse>("/blend/invite", payload)
+    return res.data
+  } catch (error: any) {
+    console.error("Failed to invite to blend:", error.response?.data || error.message)
+    throw new Error(error.response?.data?.detail || "Failed to invite to blend")
+  }
 }
 
 export async function joinBlend(payload: JoinBlendRequest): Promise<BlendResponse> {
-  const res = await apiClient.post<BlendResponse>("/blend/join", payload);
-  return res.data;
+  try {
+    const res = await apiClient.post<BlendResponse>("/blend/join", payload)
+    return res.data
+  } catch (error: any) {
+    console.error("Failed to join blend:", error.response?.data || error.message)
+    throw new Error(error.response?.data?.detail || "Failed to join blend")
+  }
 }
 
 export async function listBlends(): Promise<BlendSummary[]> {
-  const res = await apiClient.get<BlendSummary[]>("/blends");
-  return res.data;
+  try {
+    const res = await apiClient.get<BlendSummary[]>("/blends")
+    return res.data
+  } catch (error: any) {
+    console.error("Failed to list blends:", error.response?.data || error.message)
+    return []
+  }
 }
 
 export async function getBlend(code: string): Promise<BlendResponse> {
-  const res = await apiClient.get<BlendResponse>(`/blend/${code}`);
-  return res.data;
+  try {
+    const res = await apiClient.get<BlendResponse>(`/blend/${code}`)
+    return res.data
+  } catch (error: any) {
+    console.error("Failed to get blend:", error.response?.data || error.message)
+    throw new Error(error.response?.data?.detail || "Failed to get blend")
+  }
 }
 
 export async function deleteBlend(code: string): Promise<void> {
-  await apiClient.delete(`/blend/${code}`);
+  try {
+    await apiClient.delete(`/blend/${code}`)
+  } catch (error: any) {
+    console.error("Failed to delete blend:", error.response?.data || error.message)
+    throw new Error(error.response?.data?.detail || "Failed to delete blend")
+  }
 }
 
 // ============================================================================
@@ -310,6 +339,8 @@ export interface WatchHistoryItem {
   movie_id: string
   movie_name: string
   watched_at: string
+  poster_path?: string
+  release_date?: string
 }
 
 export interface AddToHistoryRequest {
@@ -358,18 +389,20 @@ export async function bulkAddToWatchHistory(movies: AddToHistoryRequest[]): Prom
 export interface WatchlistGroup {
   id: string
   name: string
+  cover_image?: string
 }
 
 export interface WatchlistMovie {
   id: string
   movie_id: string
   movie_name: string
-  poster_path: string
+  poster_path?: string
 }
 
 export interface WatchlistDetail {
   id: string
   name: string
+  cover_image?: string
   movies: WatchlistMovie[]
 }
 
@@ -533,10 +566,7 @@ export async function addHardcodedHistory(): Promise<void> {
     }
   }
 }
-// export async function addToWatchHistory(payload: WatchHistoryAddRequest): Promise<{ msg: string }> {
-//   const res = await apiClient.post("/history/add", payload)
-//   return res.data
-// }
+
 export interface WatchHistoryAddRequest {
   movie_id: string
   movie_name: string

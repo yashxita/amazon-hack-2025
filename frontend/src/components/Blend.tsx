@@ -255,7 +255,7 @@ export default function BlendPage() {
                 />
                 <Button
                   type="submit"
-                  variant="outline"
+                   
                   className="w-full border-blue-500 text-blue-400 hover:bg-blue-500/10"
                   disabled={joining}
                 >
@@ -306,11 +306,11 @@ export default function BlendPage() {
                   <Users className="w-5 h-5" /> Active Blend: {activeBlend.blend_code}
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={copyBlendCode} className="text-xs">
+                  <Button   size="sm" onClick={copyBlendCode} className="text-xs">
                     <Copy className="w-4 h-4 mr-1" /> Copy Code
                   </Button>
                   <Button
-                    variant="outline"
+                     
                     size="sm"
                     onClick={refreshActiveBlend}
                     disabled={refreshing}
@@ -399,7 +399,7 @@ export default function BlendPage() {
                           <h5 className="text-white font-bold text-lg mb-2 line-clamp-2">{rec.title}</h5>
                           <div className="flex flex-wrap gap-1 mb-3">
                             {rec.genres.slice(0, 3).map((genre, gIndex) => (
-                              <Badge key={gIndex} variant="outline" className="text-xs">
+                              <Badge key={gIndex}   className="text-xs">
                                 {genre}
                               </Badge>
                             ))}

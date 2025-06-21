@@ -5,19 +5,11 @@ import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Users, Copy, RefreshCw, ArrowLeft, Plus } from "lucide-react"
-import Image from "next/image"
+import toast, { Toaster } from "react-hot-toast"
 
-import {
-  getBlend,
-  getCurrentUser,
-  addHardcodedHistory,
-  type BlendResponse,
-  type User,
-} from "../../../../services/api"
-
-
+import { getBlend, getCurrentUser, addToWatchHistory, type BlendResponse, type User } from "../../../../services/api"
+import MovieCard from "../../../components/MovieCard"
 
 const getInitials = (name: string) =>
   name
@@ -26,10 +18,6 @@ const getInitials = (name: string) =>
     .map((n) => n[0]?.toUpperCase() ?? "")
     .join("")
     .slice(0, 2)
-
-/** Minimal replacement for toast notifications */
-const notify = (title: string, description?: string) =>
-  alert(description ? `${title}\n\n${description}` : title)
 
 /* ───────── component ───────── */
 
@@ -52,13 +40,13 @@ export default function BlendDetailPage() {
         await loadBlend()
       } catch {
         setError("Failed to load user info. Please login.")
-        notify("Authentication Error", "Please login to access this blend.")
+        toast.error("Please login to access this blend.")
       }
     }
     init()
   }, [code])
 
-  // Auto-refresh every 5 s
+  // Auto-refresh every 5 seconds
   useEffect(() => {
     if (!blend) return
     const interval = setInterval(() => loadBlend(true), 5000)
@@ -75,33 +63,23 @@ export default function BlendDetailPage() {
     } catch (err: any) {
       const errorMsg = err.response?.status === 404 ? "Blend not found" : err.message || "Failed to load blend"
       setError(errorMsg)
-      notify("Load Failed", errorMsg)
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
   }
+  console.log
 
   const copyBlendCode = async () => {
     try {
       await navigator.clipboard.writeText(code)
-      notify("Copied!", "Blend code copied to clipboard")
+      toast.success("Blend code copied to clipboard")
     } catch {
-      notify("Copy Failed", "Could not copy to clipboard")
+      toast.error("Could not copy to clipboard")
     }
   }
 
-  const handleAddHistory = async () => {
-    try {
-      await addHardcodedHistory()
-      notify("History Added!", "Your movie history has been added. Refreshing blend...")
-      setTimeout(() => loadBlend(true), 1000)
-    } catch {
-      notify("Error", "Failed to add movie history")
-    }
-  }
-
-  /* ───────── render ───────── */
 
   if (loading) {
     return (
@@ -132,10 +110,11 @@ export default function BlendDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 p-6">
+      <Toaster />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="outline" size="sm" onClick={() => router.push("/blend")} className="flex items-center gap-2">
+          <Button size="sm" onClick={() => router.push("/blend")} className="flex items-center gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
@@ -146,38 +125,18 @@ export default function BlendDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={copyBlendCode}>
+            <Button size="sm" onClick={copyBlendCode}>
               <Copy className="w-4 h-4 mr-1" />
               Copy Code
             </Button>
-            <Button variant="outline" size="sm" onClick={() => loadBlend(true)} disabled={refreshing}>
+            <Button size="sm" onClick={() => loadBlend(true)} disabled={refreshing}>
               <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </div>
-
-        {/* Add History Button */}
-        <div className="mb-8">
-          <Card className="bg-blue-900/20 border-blue-700">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-white font-semibold">Need better recommendations?</h3>
-                  <p className="text-gray-300 text-sm">Add your movie history to improve blend results</p>
-                </div>
-                <Button onClick={handleAddHistory} className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add History
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Members Panel */}
           <div className="lg:col-span-1">
-            <Card className="bg-black/50 border-gray-800">
+            <Card className="bg-gradient-to-br from-gray-800 to-gray-900 border-gray-600 shadow-xl">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <Users className="w-5 h-5" />
@@ -222,10 +181,8 @@ export default function BlendDetailPage() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Recommendations Panel */}
-          <div className="lg:col-span-2">
-            <Card className="bg-black/50 border-gray-800">
+          <div className="lg:col-span-2 ">
+            <Card className="flex-shrink-0 overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900 border-gray-600 shadow-xl">
               <CardHeader>
                 <CardTitle className="text-white">
                   Blended Recommendations
@@ -251,71 +208,25 @@ export default function BlendDetailPage() {
                     </div>
                     <h3 className="text-xl mb-2">No recommendations yet</h3>
                     <p className="text-sm mb-4">Make sure all members have added their movie history</p>
-                    <Button onClick={handleAddHistory} variant="outline">
-                      Add Your History
-                    </Button>
+                    
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-wrap gap-6 justify-center">
                     {blend.recommendations.map((rec, index) => (
-                      <Card
+                      <MovieCard
                         key={`${rec.title}-${index}`}
-                        className="bg-gray-900 border-gray-700 hover:border-red-500 transition-all duration-300 hover:shadow-lg"
-                      >
-                        <CardContent className="p-0">
-                          <div className="flex">
-                            {/* Movie Poster */}
-                            <div className="w-24 h-36 bg-gray-800 rounded-l-lg flex-shrink-0 overflow-hidden">
-                              {rec.poster_path ? (
-                                <Image
-                                  src={
-                                    rec.poster_path.startsWith("http")
-                                      ? rec.poster_path
-                                      : `https://image.tmdb.org/t/p/w200${rec.poster_path}`
-                                  }
-                                  alt={rec.title}
-                                  width={96}
-                                  height={144}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement
-                                    target.style.display = "none"
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                                  <span className="text-gray-500 text-xs">No Image</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Movie Details */}
-                            <div className="flex-1 p-4">
-                              <h3 className="text-white font-bold text-lg mb-2 line-clamp-2">{rec.title}</h3>
-
-                              <div className="flex flex-wrap gap-1 mb-3">
-                                {rec.genres.slice(0, 3).map((genre, idx) => (
-                                  <Badge key={idx} variant="outline" className="text-xs border-gray-600 text-gray-300">
-                                    {genre}
-                                  </Badge>
-                                ))}
-                              </div>
-
-                              <div className="flex items-center justify-between">
-                                <span className="text-gray-400 text-sm">
-                                  Match: {Math.round(rec.match_score * 100)}%
-                                </span>
-                                <div className="w-20 h-2 bg-gray-700 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-gradient-to-r from-red-500 to-orange-500 transition-all duration-500"
-                                    style={{ width: `${rec.match_score * 100}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                        movie={{
+                          id: `blend_${index}`,
+                          title: rec.title,
+                          poster: rec.poster_path?.startsWith("http")
+                            ? rec.poster_path
+                            : `https://image.tmdb.org/t/p/w500${rec.poster_path}`,
+                          genre: rec.genres,
+                          score: (rec.match_score * 10).toFixed(1),
+                          year: "2024", // You might want to add release year to your blend recommendation data
+                          match: Math.round(rec.match_score * 100),
+                        }}
+                      />
                     ))}
                   </div>
                 )}

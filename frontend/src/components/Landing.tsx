@@ -6,7 +6,7 @@ import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, FlameIcon as Fire } from "lucide-react";
+import { Search, FlameIcon as Fire } from 'lucide-react';
 import Hero from "./Hero";
 import MoodSelector from "./MoodSelector";
 import RecentlyWatchedSection from "./RecentlyWatchedSection";
@@ -14,7 +14,6 @@ import RecentlyWatchedSection from "./RecentlyWatchedSection";
 import DayRecommendationSection from "./DayRecommendationSection";
 import Blend from "../components/Blend";
 import TopRatedSection from "./TopRatedSection";
-import Watchlist from "../components/WatchLists";
 import { logout } from "../../services/api"; // Adjust the path if needed
 import toast,{ Toaster } from "react-hot-toast";
 
@@ -68,7 +67,7 @@ export default function Landing() {
               </h1>
               <div className="hidden md:flex gap-8">
                 <Button
-                  variant="ghost"
+                   
                   onClick={() => setActiveTab("home")}
                   className={`text-white hover:text-red-400 font-semibold tracking-wide ${
                     activeTab === "home" ? "text-red-400" : ""
@@ -77,16 +76,14 @@ export default function Landing() {
                   MOVIES
                 </Button>
                 <Button
-                  variant="ghost"
-                  onClick={() => setActiveTab("watchlists")}
-                  className={`text-white hover:text-red-400 font-semibold tracking-wide ${
-                    activeTab === "watchlists" ? "text-red-400" : ""
-                  }`}
+                   
+                  onClick={() => router.push("/watchlist")}
+                  className="text-white hover:text-red-400 font-semibold tracking-wide"
                 >
                   WATCHLISTS
                 </Button>
                   <Button
-                        variant="ghost"
+                         
                         onClick={() => router.push("/blend")}   // <— go to /blend
                         className={`text-white hover:text-red-400 font-semibold tracking-wide ${
                           pathname.startsWith() === "/blend" ? "text-red-400" : ""
@@ -107,7 +104,7 @@ export default function Landing() {
                 />
                 <Button
                   size="icon"
-                  variant="ghost"
+                   
                   className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-400"
                 >
                   <Search className="w-4 h-4" />
@@ -156,14 +153,13 @@ export default function Landing() {
           </div>
         )}
 
-        {activeTab === "watchlists" && <Watchlist />}
         {activeTab === "blend" && <Blend />}
       </main>
       {/* Mobile Navigation
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-md border-t border-gray-800 p-4">
         <div className="flex justify-around">
           <Button
-            variant="ghost"
+             
             size="icon"
             onClick={() => setActiveTab("home")}
             className={`text-white hover:text-red-400 ${
@@ -173,7 +169,7 @@ export default function Landing() {
             <Home className="w-6 h-6" />
           </Button>
           <Button
-            variant="ghost"
+             
             size="icon"
             onClick={() => setActiveTab("watchlists")}
             className={`text-white hover:text-red-400 ${
@@ -183,7 +179,7 @@ export default function Landing() {
             <Bookmark className="w-6 h-6" />
           </Button>
           <Button
-            variant="ghost"
+             
             size="icon"
             onClick={() => setActiveTab("blend")}
             className={`text-white hover:text-red-400 ${
@@ -193,14 +189,14 @@ export default function Landing() {
             <Users className="w-6 h-6" />
           </Button>
           <Button
-            variant="ghost"
+             
             size="icon"
             className="text-white hover:text-blue-400"
           >
             <Search className="w-6 h-6" />
           </Button>
           <Button
-            variant="ghost"
+             
             size="icon"
             className="text-white hover:text-blue-400"
           >

@@ -127,7 +127,7 @@ export default function MoodSelector() {
             return (
               <Button
                 key={mood.id}
-                variant="outline"
+                 
                 onClick={() => toggleMood(mood.id)}
                 className={`border-2 transition-all duration-300 px-6 py-3 text-sm font-bold tracking-wide flex-shrink-0 ${
                   isSelected
@@ -145,7 +145,7 @@ export default function MoodSelector() {
         {/* Scroll Buttons for Moods */}
         {canScrollLeft && (
           <Button
-            variant="ghost"
+             
             size="icon"
             onClick={scrollMoodsLeft}
             className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/80 hover:bg-black/90 text-white hover:text-red-400 border border-gray-700 hover:border-red-500 backdrop-blur-sm w-10 h-10 rounded-full shadow-lg"
@@ -156,7 +156,7 @@ export default function MoodSelector() {
 
         {canScrollRight && (
           <Button
-            variant="ghost"
+             
             size="icon"
             onClick={scrollMoodsRight}
             className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/80 hover:bg-black/90 text-white hover:text-red-400 border border-gray-700 hover:border-red-500 backdrop-blur-sm w-10 h-10 rounded-full shadow-lg"

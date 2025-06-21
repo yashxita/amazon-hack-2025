@@ -246,7 +246,7 @@ export default function EnhancedRecentlyWatchedSection() {
           </div>
           <Button
             onClick={handleRefresh}
-            variant="outline"
+             
             size="sm"
             className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
           >
@@ -292,14 +292,14 @@ export default function EnhancedRecentlyWatchedSection() {
         <div className="flex items-center space-x-3">
           <Clock className="w-8 h-8 text-red-500" />
           <h2 className="text-3xl font-black text-white tracking-tight">Recently Watched</h2>
-          <Badge variant="outline" className="border-gray-600 text-gray-300">
+          <Badge   className="border-gray-600 text-gray-300">
             {history.length} movies
           </Badge>
         </div>
         <div className="flex items-center space-x-2">
           <Button
             onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
-            variant="outline"
+             
             size="sm"
             className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
           >
@@ -307,7 +307,7 @@ export default function EnhancedRecentlyWatchedSection() {
           </Button>
           <Button
             onClick={handleRefresh}
-            variant="outline"
+             
             size="sm"
             className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
           >
@@ -323,7 +323,6 @@ export default function EnhancedRecentlyWatchedSection() {
             title: "Recently Watched",
             movies: history,
           }}
-          icon={Clock}
         />
       ) : (
         <div className="space-y-6">
@@ -359,11 +358,11 @@ export default function EnhancedRecentlyWatchedSection() {
                             Watched on {new Date(movie.watched_at).toLocaleString()}
                           </p>
                           <div className="flex items-center space-x-2 mt-2">
-                            <Badge variant="outline" className="text-xs border-blue-600 text-blue-400">
+                            <Badge   className="text-xs border-blue-600 text-blue-400">
                               In History
                             </Badge>
                             {movie.genre.length > 0 && (
-                              <Badge variant="outline" className="text-xs border-gray-600 text-gray-300">
+                              <Badge   className="text-xs border-gray-600 text-gray-300">
                                 {movie.genre[0]}
                               </Badge>
                             )}

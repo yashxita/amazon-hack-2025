@@ -77,6 +77,7 @@ export default function TopRatedSection() {
   console.log(topRated[0]);
 
   return (
+<div className="px-6">
   <MovieSection
   key="1"
     section={{
@@ -93,6 +94,7 @@ export default function TopRatedSection() {
     }}
     icon={Award}
   />
+  </div>
 );
 
 }

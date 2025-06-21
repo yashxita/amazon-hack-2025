@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Play, Plus, Trash2 } from "lucide-react"
+import { Play, Plus, Trash2, ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface Watchlist {
   id: string
   name: string
+  cover_image?: string
+  movie_count?: number
 }
 
 export default function Watchlist() {
@@ -82,6 +84,13 @@ export default function Watchlist() {
   return (
     <div className="min-h-screen bg-black">
       <div className="pt-16 px-6 lg:px-12">
+        <div className="flex items-center mb-8">
+          <Button onClick={() => router.push("/")}   className="text-white hover:bg-gray-800 mr-4">
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Back to Home
+          </Button>
+        </div>
+
         <div className="flex items-center justify-between mb-12">
           <h1 className="text-5xl font-black text-white tracking-tight">MY WATCHLISTS</h1>
           <Button
@@ -92,7 +101,9 @@ export default function Watchlist() {
             CREATE WATCHLIST
           </Button>
         </div>
+      </div>
 
+      <div className="pt-16 px-6 lg:px-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {watchlists.map((watchlist) => (
             <Card
@@ -100,14 +111,23 @@ export default function Watchlist() {
               className="bg-black border-2 border-gray-800 hover:border-red-500 transition-all duration-300 cursor-pointer group"
             >
               <CardContent className="p-8">
-                <div className="aspect-video bg-gray-900 rounded-lg mb-6 flex items-center justify-center group-hover:bg-gray-800 transition-colors">
-                  <Play className="w-16 h-16 text-gray-600 group-hover:text-red-400 transition-colors" />
+                <div className="aspect-video bg-gray-900 rounded-lg mb-6 flex items-center justify-center group-hover:bg-gray-800 transition-colors overflow-hidden relative">
+                  {watchlist.cover_image && (
+  <div className="mb-6 rounded-lg overflow-hidden">
+    <img
+      src={`data:image/jpeg;base64,${watchlist.cover_image}`}
+      alt="Watchlist Cover"
+      className="w-full max-h-72 object-cover border border-gray-700"
+    />
+  </div>
+)}
+                  
                 </div>
                 <h3 className="text-white font-bold text-xl mb-3">{watchlist.name}</h3>
                 <div className="flex items-center justify-between">
                   <Button
                     onClick={() => handleViewWatchlist(watchlist.id)}
-                    variant="outline"
+                    
                     className="bg-gray-800 text-white border-gray-600 hover:bg-gray-700"
                   >
                     View Movies
@@ -117,7 +137,7 @@ export default function Watchlist() {
                       e.stopPropagation()
                       deleteWatchlist(watchlist.id)
                     }}
-                    variant="outline"
+                    
                     size="sm"
                     className="bg-red-900 text-red-400 border-red-600 hover:bg-red-800"
                   >

@@ -54,7 +54,7 @@ export default function MovieCard({ movie }: { movie: any }) {
   return (
     <Card
       onClick={handleClick}
-      className={`group relative w-56 flex-shrink-0 bg-black border transition-all duration-500 hover:scale-105 cursor-pointer overflow-hidden rounded-md ${
+      className={`group relative p-0 w-56 flex-shrink-0 bg-black border transition-all duration-500 hover:scale-105 cursor-pointer overflow-hidden rounded-md ${
         addedToHistory
           ? "border-green-500 shadow-lg shadow-green-500/20"
           : isAddingToHistory
@@ -62,7 +62,7 @@ export default function MovieCard({ movie }: { movie: any }) {
             : "border-gray-800 hover:border-red-500"
       }`}
     >
-      <CardContent className="p-0">
+      <CardContent className="p-0 ">
         <div className="relative overflow-hidden rounded-md">
           <div className="w-full h-80 bg-gray-800 flex items-center justify-center">
             {imageLoading && !imageError && (
@@ -158,7 +158,7 @@ export default function MovieCard({ movie }: { movie: any }) {
           <h3 className="text-white font-bold text-lg mb-2 line-clamp-1">{movie.title}</h3>
           <div className="flex flex-wrap gap-1 mb-2">
             {movie.genre?.slice(0, 2).map((g: string) => (
-              <Badge key={g} variant="outline" className="text-xs border-gray-600 text-gray-300 bg-black/50">
+              <Badge key={g}   className="text-xs border-gray-600 text-gray-300 bg-black/50">
                 {g}
               </Badge>
             ))}

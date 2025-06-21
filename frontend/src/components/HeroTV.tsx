@@ -265,7 +265,7 @@ export default function Hero() {
                 {currentFeatured.genre.map((g) => (
                   <Badge
                     key={g}
-                    variant="outline"
+                     
                     className="border-gray-600 text-gray-300 bg-black/50"
                   >
                     {g}
@@ -280,7 +280,7 @@ export default function Hero() {
                 WATCH NOW
               </Button>
               <Button
-                variant="outline"
+                 
                 className="border-blue-400 text-blue-400 hover:bg-blue-400/10 px-8 py-3 text-lg font-semibold"
               >
                 <Info className="w-5 h-5 mr-2" />
@@ -290,28 +290,28 @@ export default function Hero() {
 
             <div className="flex items-center gap-6 mt-8">
               <Button
-                variant="ghost"
+                 
                 size="icon"
                 className="text-gray-400 hover:text-red-400"
               >
                 <ThumbsUp className="w-6 h-6" />
               </Button>
               <Button
-                variant="ghost"
+                 
                 size="icon"
                 className="text-gray-400 hover:text-blue-400"
               >
                 <Plus className="w-6 h-6" />
               </Button>
               <Button
-                variant="ghost"
+                 
                 size="icon"
                 className="text-gray-400 hover:text-blue-400"
               >
                 <Share2 className="w-6 h-6" />
               </Button>
               <Button
-                variant="ghost"
+                 
                 size="icon"
                 className="text-gray-400 hover:text-white"
               >

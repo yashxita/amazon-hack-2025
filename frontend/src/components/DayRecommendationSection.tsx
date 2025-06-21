@@ -8,6 +8,7 @@ import {
   getRecommendations,
   type MovieRecommendation,
 } from "../../services/api";
+import MovieSection from "./MovieSection";
 
 const dayMoodMap: Record<string, string> = {
   monday: "sad",
@@ -80,13 +81,8 @@ export default function DayRecommendationSection() {
           </div>
         </div>
       </div>
-      <ScrollArea className="w-full">
-        <div className="flex gap-6 pb-4">
-          {dayRecommendation.movies.map((movie: any, index: number) => (
-            <MovieCard key={movie.id || `day-movie-${index}`} movie={movie} />
-          ))}
-        </div>
-      </ScrollArea>
+     <MovieSection section={{  movies: dayRecommendation.movies }} />
+
     </div>
   );
 }
