@@ -32,12 +32,6 @@ interface SelectedMovie {
   movie_name: string;
 }
 
-interface WatchHistoryItem {
-  movie_id: string;
-  movie_name: string;
-  watched_at: string;
-}
-
 const ICON_OPTIONS = [
   "🎬",
   "🍿",
@@ -497,7 +491,7 @@ export default function CreateWatchlistPage() {
                     </p>
                   ) : (
                     <p className="text-gray-500 text-sm">
-                      Start watching movies and they'll appear in your history
+                      Start watching movies and they`&apos;`ll appear in your history
                       for better recommendations.
                     </p>
                   )}

@@ -58,7 +58,7 @@ export default function BlendPage() {
         const user = await getCurrentUser()
         setCurrentUser(user)
         await fetchBlends()
-      } catch (err: any) {
+      } catch {
         setError("Failed to load user info. Please login.")
         notify("Authentication Error", "Please login to access blend functionality.")
       }

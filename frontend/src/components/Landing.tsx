@@ -6,8 +6,7 @@ import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, FlameIcon as Fire } from 'lucide-react';
-import Hero from "./Hero";
+import { Search } from 'lucide-react';
 import MoodSelector from "./MoodSelector";
 import RecentlyWatchedSection from "./RecentlyWatchedSection";
 // import TrendingSection from "./TrendingSection";
@@ -39,7 +38,7 @@ export default function Landing() {
           },
         });
         setUser(response.data);
-      } catch (err) {
+      } catch {
         console.warn("Not logged in or session expired");
         localStorage.removeItem("token");
       }
@@ -86,7 +85,7 @@ export default function Landing() {
                          
                         onClick={() => router.push("/blend")}   // <— go to /blend
                         className={`text-white hover:text-red-400 font-semibold tracking-wide ${
-                          pathname.startsWith() === "/blend" ? "text-red-400" : ""
+                          pathname.startsWith("/blend") ? "text-red-400" : ""
                         }`}
                       >
                         BLEND

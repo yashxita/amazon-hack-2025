@@ -161,31 +161,7 @@ export default function EnhancedRecentlyWatchedSection() {
   }
 
   // Alternative: Format history with better placeholder data (if you don't want to use TMDB)
-  const formatHistoryWithPlaceholders = (arr: WatchHistoryItem[]): EnhancedHistoryItem[] =>
-    arr.map((item, index) => {
-      const watchedDate = new Date(item.watched_at)
 
-      // Generate some realistic placeholder data
-      const genres = ["Drama", "Action", "Comedy", "Thriller", "Romance", "Horror", "Sci-Fi"]
-      const randomGenres = [genres[Math.floor(Math.random() * genres.length)]]
-
-      return {
-        id: item.movie_id || `history-${index}`,
-        title: item.movie_name,
-        genre: randomGenres,
-        score: Math.round((Math.random() * 3 + 7) * 10) / 10, // Random score between 7.0-10.0
-        match: Math.floor(Math.random() * 30 + 70), // Random match percentage 70-100%
-        year: "2023", // Default year or extract from movie name if possible
-        poster: `/placeholder.svg?height=400&width=300&text=${encodeURIComponent(item.movie_name)}`,
-        watched_at: item.watched_at,
-        isHistoryItem: true,
-        watchedDate: watchedDate.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
-      }
-    })
 
   const handleRefresh = () => {
     fetchHistory()

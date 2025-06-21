@@ -10,7 +10,6 @@ import {
   Info,
   ThumbsUp,
   Share2,
-  FlameIcon as Fire,
 } from "lucide-react"
 import Image from "next/image"
 

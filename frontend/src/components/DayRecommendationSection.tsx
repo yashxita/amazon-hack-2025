@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "lucide-react";
-import MovieCard from "./MovieCard";
 import {
   getRecommendations,
   type MovieRecommendation,
@@ -47,7 +45,7 @@ export default function DayRecommendationSection() {
             today.charAt(0).toUpperCase() + today.slice(1)
           } — ${mood.toUpperCase()} Vibes`,
           description: `Based on your day, here are some ${mood} mood picks.`,
-          movies: filteredMovies.map((movie, idx) => ({
+          movies: filteredMovies.map((movie) => ({
             ...movie,
             id: movie.id,
             score: Number(movie.score.toFixed(2)),

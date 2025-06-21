@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft, Trash2, Play } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 
 interface WatchlistMovie {
   id: string
@@ -19,14 +19,18 @@ interface WatchlistDetail {
   cover_image?: string // base64
   movies: WatchlistMovie[]
 }
-export default function WatchlistDetailPage({ params }: { params: { id: string } }) {
+
+export default function WatchlistDetailPage() {
+  const { id } = useParams() as { id: string }
   const [watchlist, setWatchlist] = useState<WatchlistDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    fetchWatchlistDetail()
-  }, [params.id])
+    if (id) {
+      fetchWatchlistDetail()
+    }
+  }, [id])
 
   const fetchWatchlistDetail = async () => {
     try {
@@ -36,7 +40,7 @@ export default function WatchlistDetailPage({ params }: { params: { id: string }
         return
       }
 
-      const response = await fetch(`http://localhost:8000/watchlists/${params.id}`, {
+      const response = await fetch(`http://localhost:8000/watchlists/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -56,7 +60,7 @@ export default function WatchlistDetailPage({ params }: { params: { id: string }
   const removeMovie = async (movieId: string) => {
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`http://localhost:8000/watchlists/${params.id}/movies/${movieId}`, {
+      const response = await fetch(`http://localhost:8000/watchlists/${id}/movies/${movieId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -100,11 +104,9 @@ export default function WatchlistDetailPage({ params }: { params: { id: string }
 
   const getMoviePosterUrl = (posterPath?: string) => {
     if (!posterPath) return null
-    // Handle different poster path formats
     if (posterPath.startsWith("http")) {
       return posterPath
     }
-    // TMDB poster URL format
     return `https://image.tmdb.org/t/p/w500${posterPath.startsWith("/") ? posterPath : `/${posterPath}`}`
   }
 
@@ -128,11 +130,7 @@ export default function WatchlistDetailPage({ params }: { params: { id: string }
     <div className="min-h-screen bg-black">
       <div className="pt-8 px-6 lg:px-12">
         <div className="flex items-center mb-8">
-          <Button
-            onClick={() => router.push("/watchlist")}
-            
-            className="text-white hover:bg-gray-800 mr-4"
-          >
+          <Button onClick={() => router.push("/watchlist")} className="text-white hover:bg-gray-800 mr-4">
             <ArrowLeft className="w-5 h-5 mr-2" />
             Back
           </Button>
@@ -165,9 +163,9 @@ export default function WatchlistDetailPage({ params }: { params: { id: string }
                   <div className="aspect-[2/3] bg-gray-800 rounded-lg mb-4 flex items-center justify-center overflow-hidden relative">
                     {getMoviePosterUrl(movie.poster_path) ? (
                       <img
-                        src={getMoviePosterUrl(movie.poster_path)! || "/placeholder.svg"}
+                        src={getMoviePosterUrl(movie.poster_path)!}
                         alt={`${movie.movie_name} poster`}
-                        className="object-fit "
+                        className="object-fit"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
                           target.style.display = "none"
@@ -185,7 +183,6 @@ export default function WatchlistDetailPage({ params }: { params: { id: string }
                   <div className="flex flex-col gap-2">
                     <Button
                       onClick={() => addToWatchHistory(movie)}
-                       
                       size="sm"
                       className="bg-green-900 text-green-400 border-green-600 hover:bg-green-800 text-xs"
                     >
@@ -193,7 +190,6 @@ export default function WatchlistDetailPage({ params }: { params: { id: string }
                     </Button>
                     <Button
                       onClick={() => removeMovie(movie.movie_id)}
-                       
                       size="sm"
                       className="bg-red-900 text-red-400 border-red-600 hover:bg-red-800"
                     >

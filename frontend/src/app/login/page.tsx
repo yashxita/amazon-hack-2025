@@ -1,6 +1,5 @@
 "use client"
 import AuthForm from "@/components/AuthForm";
-import Landing from "@/components/Landing";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 export default function Home() {
