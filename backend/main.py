@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Response, status , Query
+from fastapi import FastAPI, HTTPException, Depends, Response, status , Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
@@ -10,12 +10,13 @@ import databases, sqlalchemy, joblib, asyncio, os, uuid
 import sqlalchemy
 from datetime import datetime
 import pandas as pd
-import base64
+from sqlalchemy import select
 
 from model import (
     recommend_movies_by_mood,
     recommend_blend,
     assign_tag_from_movie_history,
+    handle_voice_search,
     extract_genres,
     create_blend_code,
     join_blend_code,
@@ -47,12 +48,10 @@ class UserCreate(BaseModel):
 
 class WatchlistGroupCreate(BaseModel):
     name: str
-    cover_image: Optional[str] = None
 
 class WatchlistGroupOut(BaseModel):
     id: str
     name: str
-    cover_image: Optional[str] = None
 
 class WatchlistCreate(BaseModel):
     movie_id: str
@@ -62,11 +61,12 @@ class WatchlistMovieOut(BaseModel):
     id: str
     movie_id: str
     movie_name: str
+    poster_path: str
+    release_date: str
 
 class WatchlistDetailOut(BaseModel):
     id: str
     name: str
-    cover_image: Optional[str] = None
     movies: List[WatchlistMovieOut]
 
 class WatchlistUpdate(BaseModel):
@@ -104,6 +104,12 @@ class HistoryRecommendationResponse(BaseModel):
     recommendations: List[MovieRecommendation]
     overall_match_score: str
 
+class VoiceRecommendationRequest(BaseModel):
+    top_n: int = 10
+
+class VoiceRecommendationResponse(BaseModel):
+    recommendations: List[MovieRecommendation]
+
 class BlendCreateRequest(BaseModel):
     name: str  # blend name
 
@@ -129,6 +135,8 @@ class BlendRecommendation(BaseModel):
     title: str
     genres: List[str]
     match_score: float
+    poster_path: str
+    release_date: str
 
 class BlendResponse(BaseModel):
     blend_code: str
@@ -158,7 +166,6 @@ watchlist_groups = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
     sqlalchemy.Column("user_id", sqlalchemy.String, sqlalchemy.ForeignKey("users.id")),
     sqlalchemy.Column("name", sqlalchemy.String),
-    sqlalchemy.Column("cover_image", sqlalchemy.LargeBinary, nullable=True),  # <-- added
 )
 
 watchlists = sqlalchemy.Table(
@@ -346,55 +353,68 @@ async def recommend_by_history(request: HistoryRecommendationRequest, user=Depen
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-# === Watchlist Routes ===
-from fastapi import UploadFile, File, Form
-
-@app.post("/watchlists", response_model=WatchlistGroupOut)
-async def create_watchlist(
-    name: str = Form(...),
-    cover_image: Optional[UploadFile] = File(None),
+    
+@app.post("/recommend/voice", response_model=VoiceRecommendationResponse)
+async def recommend_by_voice(
+    audio: UploadFile = File(...),
+    top_n: int = 10,
     user=Depends(get_current_user)
 ):
-    # Check for existing watchlist
+    # Fetch user's watch history from DB
+    movie_rows = await database.fetch_all(
+        watch_history.select()
+        .where(watch_history.c.user_id == user["id"])
+        .order_by(watch_history.c.watched_at.desc())
+    )
+    user_history = [m["movie_name"] for m in movie_rows]
+    
+    # Save the uploaded audio to a temporary file
+    audio_bytes = await audio.read()
+    temp_path = f"/tmp/{audio.filename}"
+    with open(temp_path, "wb") as f:
+        f.write(audio_bytes)
+    
+    try:
+        df = handle_voice_search(temp_path, user_history_titles=user_history, top_n=top_n)
+        recommendations = [
+            {
+                "title": row["title"],
+                "score": float(row["score"]),
+                "genres": row["Genres"],
+                "poster_path": row["poster_path"],
+                "release_date": row["release_date"]
+            }
+            for _, row in df.iterrows()
+        ]
+        return {"recommendations": recommendations}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    finally:
+        # Clean up temp file
+        import os
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+# === Watchlist Routes ===
+@app.post("/watchlists", response_model=WatchlistGroupOut)
+async def create_watchlist(item: WatchlistGroupCreate, user=Depends(get_current_user)):
     query = watchlist_groups.select().where(
         (watchlist_groups.c.user_id == user["id"]) &
-        (watchlist_groups.c.name == name)
+        (watchlist_groups.c.name == item.name)
     )
     existing = await database.fetch_one(query)
     if existing:
         raise HTTPException(status_code=400, detail="Watchlist already exists.")
-
-    # Prepare image bytes
-    image_bytes = await cover_image.read() if cover_image else None
     group_id = str(uuid.uuid4())
-
-    # Insert into DB
-    query = watchlist_groups.insert().values(
-        id=group_id,
-        user_id=user["id"],
-        name=name,
-        cover_image=image_bytes
-    )
+    query = watchlist_groups.insert().values(id=group_id, user_id=user["id"], name=item.name)
     await database.execute(query)
-
-    return {
-        "id": group_id,
-        "name": name,
-        "cover_image": None  # Optional: return base64 if you want
-    }
-
+    return {"id": group_id, "name": item.name}
 
 @app.get("/watchlists", response_model=List[WatchlistGroupOut])
 async def list_all_watchlists(user=Depends(get_current_user)):
     query = watchlist_groups.select().where(watchlist_groups.c.user_id == user["id"])
     rows = await database.fetch_all(query)
-    return [{
-        "id": row["id"],
-        "name": row["name"],
-        "cover_image": base64.b64encode(row["cover_image"]).decode() if row["cover_image"] else None
-    } for row in rows]
-
+    return [{"id": row["id"], "name": row["name"]} for row in rows]
 
 @app.post("/watchlists/{group_id}/movies", status_code=201)
 async def add_movie_to_watchlist(group_id: str, item: WatchlistCreate, user=Depends(get_current_user)):
@@ -427,18 +447,41 @@ async def get_watchlist_detail(group_id: str, user=Depends(get_current_user)):
     ))
     if not group:
         raise HTTPException(status_code=404, detail="Watchlist not found")
-
     query = watchlists.select().where(watchlists.c.group_id == group_id)
-    movies = await database.fetch_all(query)
+    movies_in_watchlist = await database.fetch_all(query)  # Renamed variable
+
+    detailed_movies = []
+    for m in movies_in_watchlist:
+        movie_id = m["movie_id"]
+        
+        # Access global movies DataFrame correctly
+        if isinstance(movies, pd.DataFrame) and not movies.empty:
+            # Filter using pandas DataFrame syntax
+            movie_meta_row = movies[
+                movies['Movie_id'].astype(str).str.strip() == str(movie_id).strip()
+            ]
+            
+            poster_path = ""
+            release_date = ""
+            if not movie_meta_row.empty:
+                poster_path = movie_meta_row.iloc[0].get("poster_path", "")
+                release_date = movie_meta_row.iloc[0].get("release_date", "")
+        else:
+            poster_path = ""
+            release_date = ""
+
+        detailed_movies.append({
+            "id": m["id"],
+            "movie_id": m["movie_id"],
+            "movie_name": m["movie_name"],
+            "poster_path": poster_path,
+            "release_date": release_date
+        })
 
     return {
         "id": group["id"],
         "name": group["name"],
-        "cover_image": base64.b64encode(group["cover_image"]).decode() if group["cover_image"] else None,
-        "movies": [
-            {"id": m["id"], "movie_id": m["movie_id"], "movie_name": m["movie_name"]}
-            for m in movies
-        ]
+        "movies": detailed_movies
     }
 
 @app.delete("/watchlists/{group_id}/movies/{movie_id}")
@@ -624,29 +667,24 @@ async def get_my_blend_invitations(user=Depends(get_current_user)):
     ]
 
 @app.get("/blends", response_model=List[BlendSummary])
-async def list_all_blends(current_user: dict = Depends(get_current_user)):
+async def list_all_blends(
+    current_user: dict = Depends(get_current_user),   # enforce auth
+):
     """
     Return only the blends the caller has joined.
     """
-    try:
-        # Get all blend codes where the user is a member
-        member_query = blend_members.select().where(blend_members.c.user_id == current_user["id"])
-        member_rows = await database.fetch_all(member_query)
-        blend_codes = [row["blend_code"] for row in member_rows]
-        
-        if not blend_codes:
-            return []
-        
-        # Get blend details for those codes
-        blend_query = blends.select().where(blends.c.code.in_(blend_codes))
-        blend_rows = await database.fetch_all(blend_query)
-        
-        return [{"code": row["code"], "name": row["name"]} for row in blend_rows]
-        
-    except Exception as e:
-        print(f"Error in list_all_blends: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    # current_user is guaranteed to be a dict with an 'id' field here
+    query = (
+        select(blends.c.code, blends.c.name)
+        .select_from(
+            blends.join(blend_members,
+                        blends.c.code == blend_members.c.blend_code)
+        )
+        .where(blend_members.c.user_id == current_user["id"])
+    )
 
+    rows = await database.fetch_all(query)
+    return [BlendSummary(code=r.code, name=r.name) for r in rows]
 
 @app.get("/blend/{code}", response_model=BlendResponse)
 async def get_blend_details(code: str, user=Depends(get_current_user)):

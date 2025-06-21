@@ -13,6 +13,17 @@ import ast
 import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import os
+import ssl
+import certifi
+import pyaudio
+import wave
+import threading
+import whisper
+import re
+
+os.environ['SSL_CERT_FILE'] = certifi.where()
+ssl._create_default_https_context = ssl._create_unverified_context
 
 # Load dataset
 movies = pd.read_csv('./data/10000 Movies Data')
@@ -31,7 +42,13 @@ def extract_genres(x):
 movies['Genres'] = movies['Genres'].apply(extract_genres)
 
 # Combine fields for content-based filtering
-movies['combined'] = movies['overview']
+def make_combined(row):
+    genres = " ".join(row['Genres']) if isinstance(row['Genres'], list) else ""
+    keywords = row['Keywords'] if isinstance(row['Keywords'], str) else ""
+    overview = row['overview'] if isinstance(row['overview'], str) else ""
+    return f"{overview} {genres} {keywords}"
+
+movies['combined'] = movies.apply(make_combined, axis=1)
 
 # TF-IDF on the cleaned and reindexed DataFrame
 tfidf = TfidfVectorizer(stop_words='english')
@@ -240,7 +257,9 @@ def recommend_blend(user_histories, top_n=10, alpha=0.9, beta=0.1):
         scores.append({
             "title": row['title'],
             "genres": row['Genres'],
-            "match_score": round(match_score, 4)
+            "match_score": round(match_score, 4),
+            "poster_path": row.get('poster_path', ''),
+            "release_date": row.get('release_date', '')
         })
 
     # Sort and return top recommendations
@@ -432,3 +451,147 @@ user_history = [
     "The Dark Knight",
     "Interstellar"
 ]
+
+def record_until_enter(output_filename="output.wav", sample_rate=44100, channels=1):
+    chunk_size = 1024
+    audio_format = pyaudio.paInt16
+    frames = []
+    recording = True
+
+    def record_thread():
+        nonlocal recording
+        p = pyaudio.PyAudio()
+        stream = p.open(format=audio_format,
+                        channels=channels,
+                        rate=sample_rate,
+                        input=True,
+                        frames_per_buffer=chunk_size)
+        print("Recording... Press Enter to stop.")
+        while recording:
+            data = stream.read(chunk_size)
+            frames.append(data)
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+    t = threading.Thread(target=record_thread)
+    t.start()
+    input()  # Wait for Enter key
+    recording = False
+    t.join()
+
+    wf = wave.open(output_filename, 'wb')
+    wf.setnchannels(channels)
+    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(audio_format))
+    wf.setframerate(sample_rate)
+    wf.writeframes(b''.join(frames))
+    wf.close()
+    print("Recording stopped and saved to", output_filename)
+
+def transcribe_voice(audio_path):
+    model = whisper.load_model("medium")
+    result = model.transcribe(audio_path)
+    return result['text']
+
+def extract_query_keywords(query):
+    stopwords = set([
+        'the', 'a', 'an', 'and', 'or', 'to', 'in', 'of', 'with', 'for', 'on', 'at', 'by', 'so', 'i', 'was', 'it', 'like',
+        'that', 'this', 'but', 'as', 'is', 'be', 'are', 'were', 'do', 'does', 'did', 'if', 'then', 'than', 'from', 'about',
+        'my', 'me', 'you', 'something', 'movie', 'film', 'watch', 'see', 'would', 'really', 'maybe', 'thinking'
+    ])
+    words = re.findall(r'\w+', query.lower())
+    keywords = [w for w in words if w not in stopwords]
+    return set(keywords)
+
+def extract_reference_movie(user_query, movie_titles):
+    for title in movie_titles:
+        pattern = r'\b' + re.escape(title.lower()) + r'\b'
+        if re.search(pattern, user_query.lower()):
+            return title
+    return None
+
+def clean_query(user_query, ref_movie):
+    if ref_movie:
+        return user_query.replace(ref_movie, '').strip()
+    return user_query
+
+def keyword_genre_boost(row, query_keywords):
+    boost = 0
+    if isinstance(row['Keywords'], str):
+        movie_keywords = set(kw.strip().lower() for kw in row['Keywords'].split(','))
+        if movie_keywords & query_keywords:
+            boost += 0.3
+    if isinstance(row['Genres'], list):
+        movie_genres = set(g.lower() for g in row['Genres'])
+        if movie_genres & query_keywords:
+            boost += 0.2
+    return boost
+
+def enhanced_descriptive_recommendation(
+    user_query,
+    movies,
+    tfidf,
+    tfidf_matrix,
+    user_history_titles=None,
+    top_n=10,
+    alpha=0.5,
+    beta=0.3,
+    gamma=0.2
+):
+    query_keywords = extract_query_keywords(user_query)
+    movie_titles = movies['title'].tolist()
+    ref_movie = extract_reference_movie(user_query, movie_titles)
+    desc_query = clean_query(user_query, ref_movie)
+
+    user_history_titles = user_history_titles or []
+    if ref_movie and ref_movie not in user_history_titles:
+        user_history_titles = user_history_titles + [ref_movie]
+    user_history_titles_lower = [t.lower() for t in user_history_titles]
+
+    if user_history_titles:
+        user_history_indices = movies[movies['title'].str.lower().isin(user_history_titles_lower)].index.tolist()
+        if user_history_indices:
+            user_profile_vector = np.mean(tfidf_matrix[user_history_indices], axis=0).A1
+            user_sim = cosine_similarity([user_profile_vector], tfidf_matrix).flatten()
+        else:
+            user_sim = np.zeros(len(movies))
+    else:
+        user_sim = np.zeros(len(movies))
+
+    desc_vec = tfidf.transform([desc_query])
+    desc_sim = cosine_similarity(desc_vec, tfidf_matrix).flatten()
+
+    if 'weighted_rating_norm' not in movies.columns:
+        min_rating = movies['weighted_rating'].min()
+        max_rating = movies['weighted_rating'].max()
+        if max_rating != min_rating:
+            movies['weighted_rating_norm'] = (movies['weighted_rating'] - min_rating) / (max_rating - min_rating)
+        else:
+            movies['weighted_rating_norm'] = 0.5
+
+    scores = []
+    for idx, row in movies.iterrows():
+        title_lc = row['title'].lower()
+        if title_lc in user_history_titles_lower:
+            continue
+        sim_score = desc_sim[idx]
+        profile_score = user_sim[idx]
+        rating_score = row['weighted_rating_norm']
+        boost = keyword_genre_boost(row, query_keywords)
+        final_score = alpha * sim_score + beta * profile_score + gamma * rating_score + boost
+        scores.append((row['Movie_id'], row['title'], row['Genres'], row['release_date'], row['Keywords'],
+                       row['overview'], row['poster_path'], row['Budget'], row['Revenue'],
+                       row['popularity'], row['vote_average'], row['vote_count'], final_score))
+    scores.sort(key=lambda x: x[-1], reverse=True)
+    columns = ['Movie_id', 'title', 'Genres', 'release_date', 'Keywords', 'overview', 'poster_path',
+               'Budget', 'Revenue', 'popularity', 'vote_average', 'vote_count', 'score']
+    return pd.DataFrame(scores[:top_n], columns=columns)
+
+def handle_voice_search(audio_path, user_history_titles=None, top_n=5):
+    user_query = transcribe_voice(audio_path)
+    print("\nTranscribed text:", user_query)
+    recommendations = enhanced_descriptive_recommendation(
+        user_query, movies, tfidf, tfidf_matrix,
+        user_history_titles=user_history_titles, top_n=top_n
+    )
+    return recommendations
