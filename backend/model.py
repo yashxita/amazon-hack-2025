@@ -456,7 +456,7 @@ user_history = [
 ]
 
 def transcribe_voice(audio_path):
-    model = whisper.load_model("medium")
+    model = whisper.load_model("tiny")
     result = model.transcribe(audio_path)
     return result['text']
 
