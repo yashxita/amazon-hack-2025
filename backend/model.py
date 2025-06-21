@@ -198,7 +198,7 @@ def join_blend_code(code, user_history, user_id="User2"):
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-def recommend_blend(user_histories, top_n=10, alpha=0.9, beta=0.1):
+def recommend_blend(user_histories, top_n=50, alpha=0.9, beta=0.1):
     """
     Recommends movies for a group blend session using a combination of cosine similarity
     (from TF-IDF vectors of watched movies) and normalized rating scores.
@@ -373,7 +373,7 @@ join_blend_code(code, ['Frozen', 'Moana'], user_id="Bob")
 
 join_blend_code(code, ['Se7en', 'The Godfather'], user_id="Charlie")
 
-def recommend_for_user(user_history, top_n=10, alpha=0.9, beta=0.1):
+def recommend_for_user(user_history, top_n=25, alpha=0.9, beta=0.1):
     """
     Recommends movies for an individual user based on their watch history using
     a combination of cosine similarity and normalized rating scores.

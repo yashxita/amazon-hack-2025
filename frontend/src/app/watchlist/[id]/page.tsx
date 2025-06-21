@@ -167,7 +167,7 @@ export default function WatchlistDetailPage({ params }: { params: { id: string }
                       <img
                         src={getMoviePosterUrl(movie.poster_path)! || "/placeholder.svg"}
                         alt={`${movie.movie_name} poster`}
-                        className="w-full h-full object-cover"
+                        className="object-fit "
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
                           target.style.display = "none"

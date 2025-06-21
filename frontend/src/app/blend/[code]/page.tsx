@@ -46,12 +46,12 @@ export default function BlendDetailPage() {
     init()
   }, [code])
 
-  // Auto-refresh every 5 seconds
-  useEffect(() => {
-    if (!blend) return
-    const interval = setInterval(() => loadBlend(true), 5000)
-    return () => clearInterval(interval)
-  }, [blend])
+  // Remove auto-refresh - only refresh on user action or page load
+  // useEffect(() => {
+  //   if (!blend) return
+  //   const interval = setInterval(() => loadBlend(true), 10000)
+  //   return () => clearInterval(interval)
+  // }, [blend])
 
   const loadBlend = async (isRefresh = false) => {
     isRefresh ? setRefreshing(true) : setLoading(true)
@@ -60,6 +60,10 @@ export default function BlendDetailPage() {
     try {
       const blendData = await getBlend(code)
       setBlend(blendData)
+
+      if (isRefresh) {
+        toast.success("Blend updated with latest recommendations!")
+      }
     } catch (err: any) {
       const errorMsg = err.response?.status === 404 ? "Blend not found" : err.message || "Failed to load blend"
       setError(errorMsg)
@@ -78,6 +82,16 @@ export default function BlendDetailPage() {
       toast.error("Could not copy to clipboard")
     }
   }
+
+  
+
+  // Manual refresh function for the refresh button
+  const handleManualRefresh = async () => {
+    await loadBlend(true)
+  }
+
+  /* ───────── render ───────── */
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -115,6 +129,7 @@ export default function BlendDetailPage() {
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button
+            variant="outline"
             size="sm"
             onClick={() => router.push("/blend")}
             className="flex items-center gap-2 text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400 shadow-lg shadow-blue-500/20"
@@ -133,6 +148,7 @@ export default function BlendDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button
+              variant="outline"
               size="sm"
               onClick={copyBlendCode}
               className="text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400 shadow-lg shadow-blue-500/20"
@@ -141,12 +157,14 @@ export default function BlendDetailPage() {
               Copy Code
             </Button>
             <Button
+              variant="outline"
               size="sm"
-              onClick={() => loadBlend(true)}
+              onClick={handleManualRefresh}
               disabled={refreshing}
               className="text-red-400 border-red-500/50 hover:bg-red-500/10 hover:border-red-400 shadow-lg shadow-red-500/20"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Updating..." : "Refresh Blend"}
             </Button>
           </div>
         </div>
@@ -218,6 +236,14 @@ export default function BlendDetailPage() {
                     </code>
                   </div>
                 </div>
+
+                {/* Manual refresh hint */}
+                <div className="pt-4 border-t border-cyan-400/30">
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Click "Refresh Blend" to update recommendations</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -226,10 +252,17 @@ export default function BlendDetailPage() {
           <div className="lg:col-span-3">
             <Card className="bg-black border-2 border-red-500/60 shadow-2xl shadow-red-500/20 hover:shadow-red-500/30 transition-all duration-300">
               <CardHeader className="border-b border-red-500/30">
-                <CardTitle className="text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.3)]">
-                  Blended Recommendations
-                  {blend.users.length < 2 && (
-                    <span className="text-gray-500 text-sm font-normal ml-2">(Need 2+ members)</span>
+                <CardTitle className="text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.3)] flex items-center justify-between">
+                  <span>
+                    Blended Recommendations
+                    {blend.users.length < 2 && (
+                      <span className="text-gray-500 text-sm font-normal ml-2">(Need 2+ members)</span>
+                    )}
+                  </span>
+                  {blend.recommendations.length > 0 && (
+                    <span className="text-sm font-normal text-gray-400">
+                      {blend.recommendations.length} movies • {blend.overall_match_score} match
+                    </span>
                   )}
                 </CardTitle>
               </CardHeader>
@@ -252,6 +285,16 @@ export default function BlendDetailPage() {
                     </div>
                     <h3 className="text-xl mb-2 text-white">No recommendations yet</h3>
                     <p className="text-sm mb-4">Make sure all members have added their movie history</p>
+                    <div className="flex gap-3 justify-center">
+                      
+                      <Button
+                        onClick={handleManualRefresh}
+                        variant="outline"
+                        className="text-red-400 border-red-500/50 hover:bg-red-500/10 hover:border-red-400"
+                      >
+                        Refresh Blend
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-4">

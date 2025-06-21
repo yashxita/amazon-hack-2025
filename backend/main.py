@@ -749,12 +749,12 @@ async def get_blend_details(code: str, user=Depends(get_current_user)):
         )
         user_ids = [m["user_id"] for m in members]
 
-        # For each user, get their watch history
+        # For each user, get their LATEST watch history from database
         user_histories = []
         user_tags = {}
         usernames = []
         for uid in user_ids:
-            # Fetch watch history from database
+            # Fetch FRESH watch history from database every time
             movie_rows = await database.fetch_all(
                 watch_history.select()
                 .where(watch_history.c.user_id == uid)
@@ -763,17 +763,20 @@ async def get_blend_details(code: str, user=Depends(get_current_user)):
             history = [m["movie_name"] for m in movie_rows]
             user_histories.append(history)
             
-            # Generate user tag based on history
+            # Generate user tag based on CURRENT history
             user_tags[uid] = assign_tag_from_movie_history(history)
             
             # Get username
             u = await database.fetch_one(users.select().where(users.c.id == uid))
             usernames.append(u["username"] if u else uid)
 
-        # Generate recommendations from all members' histories
+        # ALWAYS generate fresh recommendations from current members' histories
+        print(f"🔄 Generating fresh blend recommendations for {len(user_histories)} users")
         recs = recommend_blend(user_histories)
         recommendations = recs.get("blend_recommendations", []) if isinstance(recs, dict) else recs
         overall_match_score = recs.get("overall_match_score", "0%") if isinstance(recs, dict) else "0%"
+
+        print(f"✅ Generated {len(recommendations)} recommendations with {overall_match_score} match score")
 
         return {
             "name": blend["name"],
