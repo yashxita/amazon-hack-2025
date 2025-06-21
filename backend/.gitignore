@@ -1,9 +1,9 @@
 /__pycache__/
 /myenv/
-/artifacts/tfidf_vectorizer.joblib
-/artifacts/tfidf_matrix.joblib
-/artifacts/movies_dataframe.joblib
-/artifacts/content_sim.joblib
-/artifacts/mood_genre_mapping.joblib
+# /artifacts/tfidf_vectorizer.joblib
+# /artifacts/tfidf_matrix.joblib
+# /artifacts/movies_dataframe.joblib
+# /artifacts/content_sim.joblib
+# /artifacts/mood_genre_mapping.joblib
 /users.db/
 .env

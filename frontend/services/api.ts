@@ -571,3 +571,31 @@ export interface WatchHistoryAddRequest {
   movie_id: string
   movie_name: string
 }
+
+
+
+export interface MovieSearchResult {
+  // adjust these fields to whatever your DataFrame actually contains
+  id: string
+  title: string
+  genres?: string[]
+  release_date?: string
+  poster_path?: string
+  [key: string]: any
+}
+
+/**
+ * Search for movies by title.
+ * Calls GET /search?title=...
+ */
+export async function searchMovies(title: string): Promise<MovieSearchResult[]> {
+  try {
+    const response = await apiClient.get<MovieSearchResult[]>('/search', {
+      params: { title },
+    })
+    return response.data
+  } catch (error: any) {
+    console.error('Failed to search movies:', error.response?.data || error.message)
+    return []
+  }
+}
