@@ -84,7 +84,7 @@ Frontend (Next.js) ↔ Backend (FastAPI) ↔ ML Engine + Database (SQLite)
 ### Recommendations
 - `POST /recommend` - Get mood-based recommendations
 - `POST /recommend/history` - Get history-based recommendations
-- `POST /recommend/voice` - Voice-powered recommendations
+- `POST /recommend/voice` - Voice-powered descriptive recommendations
 
 ### Collaborative Features
 - `POST /blend/create` - Create a new blend session
