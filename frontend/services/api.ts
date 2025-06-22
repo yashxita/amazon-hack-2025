@@ -1,5 +1,5 @@
 import axios from "axios"
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://c9e2-49-37-101-221.ngrok-free.app"
 
 // ============================================================================
 // MOVIE RECOMMENDATION INTERFACES & FUNCTIONS
