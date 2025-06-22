@@ -163,12 +163,6 @@ export default function MovieCard({
               )}
             </div>
 
-            {movie.match && (
-              <div className="absolute top-3 right-3 bg-black/90 px-3 py-1 rounded-full border border-blue-400">
-                <span className="text-blue-400 text-sm font-bold">{movie.match}%</span>
-              </div>
-            )}
-
             {movie.trending && (
               <div className="absolute top-3 right-3 bg-black/90 px-3 py-1 rounded-full border border-green-400">
                 <span className="text-green-400 text-sm font-bold">{movie.trending}</span>
