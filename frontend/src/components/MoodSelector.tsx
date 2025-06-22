@@ -205,7 +205,7 @@ export default function MoodSelector() {
             id: movie.id || idx, // optional: prefer unique movie.id if available
             title: movie.title,
             genre: movie.genres,
-            score: Number(movie.score.toFixed(2)),
+            score: Number(Number(movie.score.toFixed(2))*10).toFixed(2),
             match: Math.round(movie.score * 10),
             year: movie.release_date ? Number.parseInt(movie.release_date.slice(0, 4)) : 2023,
             poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
