@@ -48,7 +48,6 @@ export default function DayRecommendationSection() {
           movies: filteredMovies.map((movie) => ({
             ...movie,
             id: movie.id,
-            score: Number(movie.score.toFixed(2)),
             match: Math.round(movie.score * 10),
             year: movie.release_date?.slice(0, 4),
             poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,

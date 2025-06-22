@@ -406,7 +406,8 @@ export interface WatchlistMovie {
   id: string
   movie_id: string
   movie_name: string
-  poster_path?: string
+  poster_path: string
+  release_date: string
 }
 
 export interface WatchlistDetail {

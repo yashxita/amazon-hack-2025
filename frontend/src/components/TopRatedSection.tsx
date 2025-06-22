@@ -89,11 +89,13 @@ export default function TopRatedSection() {
         year: movie.release_date
           ? parseInt(movie.release_date.slice(0, 4))
           : 2023,
-        match: Math.round(movie.score * 10),
+        score:movie.score
       })),
     }}
     icon={Award}
+    showScore={true} 
   />
+  
   </div>
 );
 

@@ -1,28 +1,16 @@
 "use client"
-import {
-  getWatchlistDetail,
 
-} from "../../../../services/api"
-
-
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
-import MovieCard from "@/components/MovieCard" // Adjust path if needed
-
-interface WatchlistMovie {
-  id: string
-  movie_id: string
-  movie_name: string
-  poster_path?: string
-}
+import { WatchlistMovie, getWatchlistDetail } from "../../../../services/api"
+import MovieCard from "@/components/MovieCard"
 
 interface WatchlistDetail {
   id: string
   name: string
-  cover_image?: string // base64
   movies: WatchlistMovie[]
 }
 
@@ -33,57 +21,26 @@ export default function WatchlistDetailPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (id) {
-      fetchWatchlistDetail()
+    const token = localStorage.getItem("token")
+    if (!token) {
+      router.push("/login")
+      return
     }
+
+    const fetchData = async () => {
+      try {
+        const data = await getWatchlistDetail(id)
+        setWatchlist(data)
+        console.log("Fetched watchlist detail:", data)
+      } catch (error) {
+        console.error("Error fetching watchlist:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (id) fetchData()
   }, [id])
-
-const fetchWatchlistDetail = async () => {
-  const token = localStorage.getItem("token")
-  if (!token) {
-    router.push("/login")
-    return
-  }
-
-  const data = await getWatchlistDetail(id)
-  setWatchlist(data)
-  setLoading(false)
-}
-
-
-  // const removeMovie = async (movieId: string) => {
-  //   try {
-  //     const token = localStorage.getItem("token")
-  //     const response = await fetch(`http://localhost:8000/watchlists/${id}/movies/${movieId}`, {
-  //       method: "DELETE",
-  //       headers: {
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //     })
-
-  //     if (response.ok) {
-  //       setWatchlist((prev) =>
-  //         prev
-  //           ? {
-  
-  //               ...prev,
-  //               movies: prev.movies.filter((m) => m.movie_id !== movieId),
-  //             }
-  //           : null
-  //       )
-  //     }
-  //   } catch (error) {
-  //     console.error("Error removing movie:", error)
-  //   }
-  // }
-
-  const getMoviePosterUrl = (posterPath?: string) => {
-    if (!posterPath) return null
-    if (posterPath.startsWith("http")) {
-      return posterPath
-    }
-    return `https://image.tmdb.org/t/p/w500${posterPath.startsWith("/") ? posterPath : `/${posterPath}`}`
-  }
 
   if (loading) {
     return (
@@ -129,19 +86,21 @@ const fetchWatchlistDetail = async () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {watchlist.movies.map((movie) => (
-              <MovieCard
-                key={movie.id}
-                movie={{
-                  id: movie.movie_id,
-                  title: movie.movie_name,
-                  poster: getMoviePosterUrl(movie.poster_path),
-                  year: "", // Optional: populate if available
-                  genre: [], // Optional: populate if available
-                  score: "", // Optional: populate if available
-                }}
-              />
-            ))}
+            {watchlist.movies.map((movie) => {
+              return (
+                <MovieCard
+                  key={movie.id}
+                  movie={{
+                    id: movie.movie_id,
+                    title: movie.movie_name,
+                    poster:`https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+                    year: movie.release_date ? new Date(movie.release_date).getFullYear().toString() : "",
+                    genre: [],
+                    score: "",
+                  }}
+                />
+              )
+            })}
           </div>
         )}
       </div>

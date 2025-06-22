@@ -41,8 +41,8 @@ export default function VoiceRecommendations({
       : "0";
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-8">
-      <Card className="bg-gray-900 border-gray-700 shadow-2xl">
+    <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-8 ">
+      <Card className="bg-white/10 border-gray-700 shadow-3xl " >
         <CardHeader className="border-b border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -64,7 +64,7 @@ export default function VoiceRecommendations({
                 onClick={onNewVoiceSearch}
                 variant="outline"
                 size="sm"
-                className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"
+                className="border-red-500 text-red-400 hover:bg-blue-500 hover:text-white"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 New Search
@@ -128,7 +128,7 @@ export default function VoiceRecommendations({
                         : [movie.genres],
                       year: movie.release_date?.slice(0, 4) || "N/A",
                       title: movie.title,
-                      match: Math.round(movie.score * 100), // optional if you want to show match badge
+                      // optional if you want to show match badge
                       // ... any other fields needed
                     }}
                   />

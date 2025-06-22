@@ -7,9 +7,11 @@ import MovieCard from "./MovieCard";
 export default function MovieSection({
   section,
   icon: Icon,
+  showScore = false,
 }: {
   section: any;
   icon?: any;
+  showScore?: boolean
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -134,11 +136,10 @@ export default function MovieSection({
           }}
         >
           {section.movies.map((movie: any, index: number) => (
-            <MovieCard key={movie.id || `movie-${index}`} movie={movie} />
+            <MovieCard key={movie.id || `movie-${index}`} movie={movie}  showScore={showScore}  />
           ))}
         </div>
 
-        {/* Additional overlay buttons for better UX */}
         {canScrollLeft && (
           <Button
              

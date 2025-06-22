@@ -7,7 +7,13 @@ import { Badge } from "@/components/ui/badge"
 import { Play, Star, Check } from "lucide-react"
 import { addToWatchHistory } from "../../services/api"
 
-export default function MovieCard({ movie }: { movie: any }) {
+export default function MovieCard({
+  movie,
+  showScore = false, // 👈 default to false
+}: {
+  movie: any
+  showScore?: boolean
+}) {
   const [imageError, setImageError] = useState(false)
   const [imageLoading, setImageLoading] = useState(true)
   const [isAddingToHistory, setIsAddingToHistory] = useState(false)
@@ -183,10 +189,13 @@ export default function MovieCard({ movie }: { movie: any }) {
                 </Badge>
               ))}
             </div>
-            <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-              <span className="text-white text-sm font-semibold">{movie.score}</span>
-            </div>
+            
+            {showScore && (
+  <div className="flex items-center gap-2">
+    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+    <span className="text-white text-sm font-semibold">{movie.score}</span>
+  </div>
+)}
           </div>
         </CardContent>
       </Card>

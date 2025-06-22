@@ -181,7 +181,7 @@ watchlists = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
     sqlalchemy.Column("group_id", sqlalchemy.String, sqlalchemy.ForeignKey("watchlist_groups.id")),
     sqlalchemy.Column("movie_id", sqlalchemy.String),
-    sqlalchemy.Column("movie_name", sqlalchemy.String),
+    sqlalchemy.Column("movie_name", sqlalchemy.String)
 )
 
 # --- Watch History table ---
@@ -559,7 +559,7 @@ async def get_watchlist_detail(group_id: str, user=Depends(get_current_user)):
             if isinstance(movies, pd.DataFrame) and not movies.empty:
                 # Filter using pandas DataFrame syntax
                 movie_meta_row = movies[
-                    movies['Movie_id'].astype(str).str.strip() == str(movie_id).strip()
+                    movies['title'].str.strip().str.lower() == m["movie_name"].strip().lower()
                 ]
                 
                 if not movie_meta_row.empty:
