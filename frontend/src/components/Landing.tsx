@@ -104,68 +104,73 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-black">
       <Toaster />
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
-        <div className="container mx-auto px-6 lg:px-12 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-12">
-              <h1 className="text-3xl font-black text-white tracking-tight">
-                CINE<span className="text-red-500">AI</span>
-              </h1>
-              <div className="hidden md:flex gap-8">
-                <Button
-                  onClick={() => setActiveTab("home")}
-                  className={`text-white hover:text-red-400 font-semibold tracking-wide ${
-                    activeTab === "home" ? "text-red-400" : ""
-                  }`}
-                >
-                  MOVIES
-                </Button>
-                <Button
-                  onClick={() => router.push("/watchlist")}
-                  className="text-white hover:text-red-400 font-semibold tracking-wide"
-                >
-                  WATCHLISTS
-                </Button>
-                <Button
-                  onClick={() => router.push("/blend")}
-                  className={`text-white hover:text-red-400 font-semibold tracking-wide ${
-                    pathname.startsWith("/blend") ? "text-red-400" : ""
-                  }`}
-                >
-                  BLEND
-                </Button>
-              </div>
-            </div>
+<nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
+  <div className="container mx-auto px-3 sm:px-6 lg:px-12 py-1.5 sm:py-3">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-4">
 
-            <div className="flex items-center gap-4">
-              <LandingSearch
-                onMovieSelect={handleMovieSelect}
-                onVoiceResults={handleVoiceResults}
-                className="w-64"
-              />
+      {/* Logo + Nav Buttons */}
+      <div className="flex flex-wrap items-center justify-between w-full sm:w-auto gap-2 sm:gap-6">
+        <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">
+          CINE<span className="text-red-500">AI</span>
+        </h1>
 
-              {user ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-white font-semibold">{user.username}</span>
-                  <Button
-                    className="border-red-500 text-red-400 bg-black hover:bg-red-100 font-semibold"
-                    onClick={handleLogout}
-                  >
-                    Logout
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  className="border-blue-400 text-blue-400 hover:bg-blue-100 font-semibold"
-                  onClick={() => router.push("/login")}
-                >
-                  LOGIN
-                </Button>
-              )}
-            </div>
-          </div>
+        <div className="flex flex-wrap gap-1.5 text-xs sm:text-sm">
+          <Button
+            onClick={() => setActiveTab("home")}
+            className={`px-2 py-1 text-white hover:text-red-400 font-medium tracking-tight ${
+              activeTab === "home" ? "text-red-400" : ""
+            }`}
+          >
+            MOVIES
+          </Button>
+          <Button
+            onClick={() => router.push("/watchlist")}
+            className="px-2 py-1 text-white hover:text-red-400 font-medium tracking-tight"
+          >
+            WATCHLISTS
+          </Button>
+          <Button
+            onClick={() => router.push("/blend")}
+            className={`px-2 py-1 text-white hover:text-red-400 font-medium tracking-tight ${
+              pathname.startsWith("/blend") ? "text-red-400" : ""
+            }`}
+          >
+            BLEND
+          </Button>
         </div>
-      </nav>
+      </div>
+
+      {/* Search + Login/Logout */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full sm:w-auto">
+        <LandingSearch
+          onMovieSelect={handleMovieSelect}
+          onVoiceResults={handleVoiceResults}
+          className="w-full sm:w-64 md:w-72"
+        />
+
+        {user ? (
+          <div className="flex items-center gap-1.5">
+            <span className="text-white text-sm font-medium">{user.username}</span>
+            <Button
+              className="text-xs border-red-500 text-red-400 bg-black hover:bg-red-100 font-medium px-2 py-1"
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+          </div>
+        ) : (
+          <Button
+            className="text-xs border-blue-400 text-blue-400 hover:bg-blue-100 font-medium px-2 py-1"
+            onClick={() => router.push("/login")}
+          >
+            LOGIN
+          </Button>
+        )}
+      </div>
+
+    </div>
+  </div>
+</nav>
 
       {/* Main Content */}
       <main className="pt-20 space-y-8">

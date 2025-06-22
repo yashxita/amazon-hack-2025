@@ -71,7 +71,7 @@ export default function AuthForm({ mode, onToggleMode, onSuccess }: AuthFormProp
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Film className="w-10 h-10 text-red-500" />
-            <h1 className="text-3xl font-black text-white tracking-wide">CineAi</h1>
+            <h1 className="text-3xl font-black text-white tracking-wide">CINEAI</h1>
           </div>
           <p className="text-gray-400">
             {mode === "login" ? "Welcome back! Sign in to continue" : "Join us to discover amazing movies"}
