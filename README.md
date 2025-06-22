@@ -1,6 +1,6 @@
 # CINEAI - AI-Powered Movie Recommendation Platform
 
-CINEAI is a modern movie recommendation platform that combines individual preferences with collaborative filtering to provide personalized movie suggestions. The platform features individual watchlist management, mood-based recommendations, voice-powered search, collaborative "blend" sessions, and comprehensive watch history tracking.
+CINEAI is a modern movie recommendation platform that combines individual preferences with collaborative filtering to provide personalized movie suggestions. The platform features individual watchlist management, mood-based recommendations, voice-powered descriptive search, collaborative "blend" sessions, and comprehensive watch history tracking.
 
 ## Features
 
