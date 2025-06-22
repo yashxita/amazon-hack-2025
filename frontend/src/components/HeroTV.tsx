@@ -21,57 +21,59 @@ import {
   Share2,
 } from "lucide-react";
 import { Effects } from "./Effects";
+import { addToWatchHistory } from "../../services/api"; // ← added for history
+import { toast } from "react-hot-toast";
 
 const featuredMovies = [
   {
-    id: 1,
-    title: "DUNE: PART TWO",
-    subtitle: "Epic Sci-Fi Adventure • 2024",
+    id: 667257,
+    title: "Impossible Things",
+    subtitle: "Family, Drama • 2021",
     description:
-      "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family. Facing a choice between the love of his life and the fate of the universe, he must prevent a terrible future only he can foresee.",
-    rating: 8.9,
-    year: 2024,
-    genre: ["Sci-Fi", "Adventure", "Drama"],
-    backdrop: "/placeholder.svg?height=800&width=1400",
-    poster: "/placeholder.svg?height=600&width=400",
+      "Matilde is a woman who, after the death of her husband - a man who constantly abused her - finds her new best friend in Miguel, her young, insecure, disoriented and even dealer neighbor",
+    rating: 8.5,
+    year: 2021,
+    genre: ["Family", "Drama"],
+    backdrop: "/t2Ew8NZ8Ci2kqmoecZUNQUFDJnQ.jpg",
+    poster: "/t2Ew8NZ8Ci2kqmoecZUNQUFDJnQ.jpg",
   },
   {
-    id: 2,
-    title: "OPPENHEIMER",
-    subtitle: "Historical Drama • 2023",
+    id: 210577,
+    title: "Gone Girl",
+    subtitle: "Mystery, Thriller, Drama • 2014",
     description:
-      "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II. A gripping tale of science, politics, and moral responsibility.",
-    rating: 8.3,
-    year: 2023,
-    genre: ["Drama", "History", "Biography"],
-    backdrop: "/placeholder.svg?height=800&width=1400",
-    poster: "/placeholder.svg?height=600&width=400",
+      "With his wife's disappearance having become the focus of an intense media circus, a man sees the spotlight turned on him when it's suspected that he may not be innocent.",
+    rating: 7.9,
+    year: 2014,
+    genre: ["Mystery", "Thriller", "Drama"],
+    backdrop: "/qymaJhucquUwjpb8oiqynMeXnID.jpg",
+    poster: "/qymaJhucquUwjpb8oiqynMeXnID.jpg",
   },
   {
-    id: 3,
-    title: "SPIDER-MAN: ACROSS THE SPIDER-VERSE",
-    subtitle: "Animated Adventure • 2023",
+    id: 379170,
+    title: "Sherlock: The Abominable Bride",
+    subtitle: "Crime, Drama, Mystery, TV Movie • 2016",
     description:
-      "Miles Morales catapults across the Multiverse, where he encounters a team of Spider-People charged with protecting its very existence. A visually stunning animated masterpiece.",
-    rating: 8.7,
-    year: 2023,
-    genre: ["Animation", "Action", "Adventure"],
-    backdrop: "/placeholder.svg?height=800&width=1400",
-    poster: "/placeholder.svg?height=600&width=400",
+      "Sherlock Holmes and Dr. Watson find themselves in 1890s London in this holiday special.",
+    rating: 7.9,
+    year: 2016,
+    genre: ["Crime", "Drama", "Mystery", "TV Movie"],
+    backdrop: "/hibE8cyZs2Bm0o4WaWd1pppvjO2.jpg",
+    poster: "/hibE8cyZs2Bm0o4WaWd1pppvjO2.jpg",
   },
   {
-    id: 4,
-    title: "THE BATMAN",
-    subtitle: "Dark Crime Thriller • 2022",
+    id: 86000,
+    title: "Always",
+    subtitle: "Romance, Drama, Adventure • 2011",
     description:
-      "When a sadistic serial killer begins murdering key political figures in Gotham, Batman is forced to investigate the city's hidden corruption and question his family's involvement.",
-    rating: 7.8,
-    year: 2022,
-    genre: ["Action", "Crime", "Drama"],
-    backdrop: "/placeholder.svg?height=800&width=1400",
-    poster: "/placeholder.svg?height=600&width=400",
+      "Cheol-Min, a man with a dark, picks up a part-time night job as a parking lot attendant. He sits in the tiny pay booth in the parking lot and stares at the small television. A woman named Jung-Hwa walks into the booth. Cheol-Min realizes the woman is blind and she is confusing him for the parking attendant who worked there previously.  Nevertheless, the woman comes back on another night to watch the same television drama series. Cheol-Min starts becoming attached to Jung-Hwa and they find out they are connected by the same incident in the past.",
+    rating: 7.9,
+    year: 2011,
+    genre: ["Romance", "Drama", "Adventure"],
+    backdrop: "/7PaCGnjY87sc9088zxFf34Tamcz.jpg",
+    poster: "/7PaCGnjY87sc9088zxFf34Tamcz.jpg",
   },
-];
+]
 
 function CameraLookAtCenter() {
   const { camera } = useThree();
@@ -119,7 +121,12 @@ function CurvedTV() {
 
   return (
     <group ref={groupRef}>
-      <Float floatIntensity={2} rotationIntensity={1} speed={1} floatingRange={[-0.2, 0.2]}>
+      <Float
+        floatIntensity={2}
+        rotationIntensity={1}
+        speed={1}
+        floatingRange={[-0.2, 0.2]}
+      >
         <Model scale={4} position={[34, -7, 20]} />
       </Float>
     </group>
@@ -129,7 +136,13 @@ function CurvedTV() {
 export default function Hero() {
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [hasMounted, setHasMounted] = useState(false);
+
+  // ← new state for history
+  const [isAddingToHistory, setIsAddingToHistory] = useState(false);
+  const [addedToHistory, setAddedToHistory] = useState(false);
+
   const currentFeatured = featuredMovies[currentHeroIndex];
+  const movie = currentFeatured; // alias for handler
 
   useEffect(() => {
     setHasMounted(true);
@@ -143,6 +156,32 @@ export default function Hero() {
   }, []);
 
   if (!hasMounted) return null;
+
+const handleClick = async () => {
+  if (isAddingToHistory || addedToHistory) return;
+
+  console.log("Adding movie to history:", movie);
+  setIsAddingToHistory(true);
+
+  try {
+    await addToWatchHistory({
+      movie_id: movie.id?.toString() || movie.title,
+      movie_name: movie.title,
+    });
+
+    setAddedToHistory(true);
+    setTimeout(() => setAddedToHistory(false), 2000);
+
+    toast.success(`${movie.title} added to history!`);
+    console.log(`"${movie.title}" added to watch history!`);
+  } catch (error) {
+    console.error("Error adding movie to history:", error);
+    toast.error("There was a problem adding this movie to your history.")
+  } finally {
+    setIsAddingToHistory(false);
+  }
+};
+
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-black">
@@ -175,7 +214,11 @@ export default function Hero() {
           </Float>
 
           <Float floatIntensity={1} rotationIntensity={1}>
-            <mesh scale={17} position={[40, -15, -30]} rotation={[0, 0, Math.PI / 2.5]}>
+            <mesh
+              scale={17}
+              position={[40, -15, -30]}
+              rotation={[0, 0, Math.PI / 2.5]}
+            >
               <ringGeometry args={[0.9, 1, 3, 1]} />
               <meshStandardMaterial
                 color="white"
@@ -187,11 +230,36 @@ export default function Hero() {
           </Float>
 
           <Environment resolution={512}>
-            <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 4, -9]} scale={[10, 1, 1]} />
-            <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 4, 6]} scale={[10, 1, 1]} />
-            <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 4, 9]} scale={[10, 1, 1]} />
-            <Lightformer intensity={2} rotation-y={Math.PI / 2} position={[-50, 2, 0]} scale={[100, 2, 1]} />
-            <Lightformer intensity={2} rotation-y={-Math.PI / 2} position={[50, 2, 0]} scale={[100, 2, 1]} />
+            <Lightformer
+              intensity={2}
+              rotation-x={Math.PI / 2}
+              position={[0, 4, -9]}
+              scale={[10, 1, 1]}
+            />
+            <Lightformer
+              intensity={2}
+              rotation-x={Math.PI / 2}
+              position={[0, 4, 6]}
+              scale={[10, 1, 1]}
+            />
+            <Lightformer
+              intensity={2}
+              rotation-x={Math.PI / 2}
+              position={[0, 4, 9]}
+              scale={[10, 1, 1]}
+            />
+            <Lightformer
+              intensity={2}
+              rotation-y={Math.PI / 2}
+              position={[-50, 2, 0]}
+              scale={[100, 2, 1]}
+            />
+            <Lightformer
+              intensity={2}
+              rotation-y={-Math.PI / 2}
+              position={[50, 2, 0]}
+              scale={[100, 2, 1]}
+            />
           </Environment>
 
           <Suspense fallback={null}>
@@ -208,12 +276,16 @@ export default function Hero() {
             <div className="mb-6">
               <div className="inline-flex items-center gap-2 bg-red-500/20 border border-red-500 px-4 py-2 rounded-full mb-4">
                 <Play className="w-4 h-4 text-red-400" />
-                <span className="text-red-400 font-semibold text-sm">NOW STREAMING</span>
+                <span className="text-red-400 font-semibold text-sm">
+                  NOW STREAMING
+                </span>
               </div>
               <h1 className="text-6xl lg:text-8xl font-black text-white mb-4 tracking-tight">
                 {currentFeatured.title}
               </h1>
-              <p className="text-blue-400 text-xl font-semibold mb-4">{currentFeatured.subtitle}</p>
+              <p className="text-blue-400 text-xl font-semibold mb-4">
+                {currentFeatured.subtitle}
+              </p>
             </div>
 
             <p className="text-gray-300 text-lg leading-relaxed mb-8 max-w-xl">
@@ -223,11 +295,16 @@ export default function Hero() {
             <div className="flex flex-wrap items-center gap-4 mb-8">
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                <span className="text-white font-bold text-lg">{currentFeatured.rating}</span>
+                <span className="text-white font-bold text-lg">
+                  {currentFeatured.rating}
+                </span>
               </div>
               <div className="flex gap-2">
                 {currentFeatured.genre.map((g) => (
-                  <Badge key={g} className="border-gray-600 text-gray-300 bg-black/50">
+                  <Badge
+                    key={g}
+                    className="border-gray-600 text-gray-300 bg-black/50"
+                  >
                     {g}
                   </Badge>
                 ))}
@@ -235,30 +312,16 @@ export default function Hero() {
             </div>
 
             <div className="flex gap-4">
-              <Button className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 text-lg font-semibold shadow-lg shadow-red-500/30">
+              <Button
+                onClick={handleClick} // ← here be the click!
+                className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 text-lg font-semibold shadow-lg shadow-red-500/30"
+              >
                 <Play className="w-5 h-5 mr-2 fill-white" />
                 WATCH NOW
               </Button>
-              <Button className="border-blue-400 text-blue-400 hover:bg-blue-400/10 px-8 py-3 text-lg font-semibold">
-                <Info className="w-5 h-5 mr-2" />
-                MORE INFO
-              </Button>
+              
             </div>
 
-            <div className="flex items-center gap-6 mt-8">
-              <Button size="icon" className="text-gray-400 hover:text-red-400">
-                <ThumbsUp className="w-6 h-6" />
-              </Button>
-              <Button size="icon" className="text-gray-400 hover:text-blue-400">
-                <Plus className="w-6 h-6" />
-              </Button>
-              <Button size="icon" className="text-gray-400 hover:text-blue-400">
-                <Share2 className="w-6 h-6" />
-              </Button>
-              <Button size="icon" className="text-gray-400 hover:text-white">
-                <Volume2 className="w-6 h-6" />
-              </Button>
-            </div>
           </div>
         </div>
       </div>
@@ -269,7 +332,9 @@ export default function Hero() {
             key={index}
             onClick={() => setCurrentHeroIndex(index)}
             className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              index === currentHeroIndex ? "bg-red-500" : "bg-gray-600 hover:bg-gray-400"
+              index === currentHeroIndex
+                ? "bg-red-500"
+                : "bg-gray-600 hover:bg-gray-400"
             }`}
           />
         ))}
