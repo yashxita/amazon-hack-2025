@@ -141,11 +141,11 @@ export default function Landing() {
       </div>
 
       {/* Search + Login/Logout */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full sm:w-auto ">
         <LandingSearch
           onMovieSelect={handleMovieSelect}
           onVoiceResults={handleVoiceResults}
-          className="w-full sm:w-64 md:w-72"
+          className="w-full sm:w-64 md:w-72 mr-10"
         />
 
         {user ? (
