@@ -240,7 +240,7 @@ export default function CreateWatchlistPage() {
       // Add movies to watchlist
       for (const movie of selectedMovies) {
         const movieResponse = await fetch(
-          `${API_BASE_URL}/${watchlistId}/movies`,
+          `${API_BASE_URL}/watchlists/${watchlistId}/movies`,
           {
             method: "POST",
             headers: {
