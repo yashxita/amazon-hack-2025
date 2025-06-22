@@ -6,7 +6,7 @@ import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from 'lucide-react';
+import { Search } from "lucide-react";
 import MoodSelector from "./MoodSelector";
 import RecentlyWatchedSection from "./RecentlyWatchedSection";
 // import TrendingSection from "./TrendingSection";
@@ -37,19 +37,18 @@ export default function Landing() {
   );
   const router = useRouter();
 
-useEffect(() => {
-  const fetchUser = async () => {
-    try {
-      const user = await getCurrentUser();
-      setUser(user);
-    } catch (err) {
-      console.warn("Not logged in or session expired");
-      localStorage.removeItem("token");
-    }
-  };
-  fetchUser();
-}, []);
-
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user = await getCurrentUser();
+        setUser(user);
+      } catch (err) {
+        console.warn("Not logged in or session expired",err);
+        localStorage.removeItem("token");
+      }
+    };
+    fetchUser();
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -63,12 +62,12 @@ useEffect(() => {
     }
     try {
       const { data } = await axios.get<MovieSearchResult[]>("/search", {
-        baseURL: "http://127.0.0.1:8000",
+        baseURL: `${API_BASE_URL}`,
         params: { title: searchQuery },
       });
       setSearchResults(data);
       if (data.length === 0) {
-        toast("No movies found", { icon: '🎬' });
+        toast("No movies found", { icon: "🎬" });
       }
     } catch (err: any) {
       console.error(err);
