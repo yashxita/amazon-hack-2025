@@ -258,7 +258,7 @@ export default function CreateWatchlistPage() {
                 </div>
 
                 <div>
-                  <Label className="text-white">Choose icon</Label>
+                  <Label className="text-white">Choose Icon</Label>
                   <div className="grid grid-cols-6 gap-2 mt-2">
                     {ICON_OPTIONS.map((icon) => (
                       <Button
