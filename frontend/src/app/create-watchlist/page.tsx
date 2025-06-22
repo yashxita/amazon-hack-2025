@@ -242,7 +242,7 @@ export default function CreateWatchlistPage() {
           <div className="lg:col-span-1">
             <Card className="bg-gray-900 border-gray-700 sticky top-8">
               <CardContent className="p-6 space-y-4">
-                <h2 className="text-xl font-bold text-white mb-2">Watchlist Details</h2>
+                <h2 className="text-xl font-bold text-white mb-2">Watchlist details</h2>
 
                 <div>
                   <Label htmlFor="name" className="text-white">
