@@ -105,12 +105,16 @@ export interface ApiError {
 }
 
 // Create axios instance with base configuration
+// Create axios instance with base configuration
 const apiClient = axios.create({
   baseURL: `${API_BASE_URL}`,
   headers: {
     "Content-Type": "application/json",
+    "bypass-tunnel-reminder": "true",
+    "User-Agent": "NonBrowser/1.0",
   },
 })
+
 
 // Add request interceptor to include auth token
 apiClient.interceptors.request.use(
@@ -119,6 +123,7 @@ apiClient.interceptors.request.use(
       const token = localStorage.getItem("token")
       if (token) {
         config.headers.Authorization = `Bearer ${token}`
+        
       }
     }
     return config

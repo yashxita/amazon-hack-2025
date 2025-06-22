@@ -16,6 +16,8 @@ import TopRatedSection from "./TopRatedSection";
 import { logout } from "../../services/api"; // Adjust the path if needed
 import toast, { Toaster } from "react-hot-toast";
 import { API_BASE_URL } from "../../services/api";
+import { getCurrentUser } from "../../services/api";
+
 interface MovieSearchResult {
   id: string;
   title: string;
@@ -35,25 +37,19 @@ export default function Landing() {
   );
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-        const response = await axios.get("/me", {
-          baseURL: `${API_BASE_URL}`,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setUser(response.data);
-      } catch {
-        console.warn("Not logged in or session expired");
-        localStorage.removeItem("token");
-      }
-    };
-    fetchUser();
-  }, []);
+useEffect(() => {
+  const fetchUser = async () => {
+    try {
+      const user = await getCurrentUser();
+      setUser(user);
+    } catch (err) {
+      console.warn("Not logged in or session expired");
+      localStorage.removeItem("token");
+    }
+  };
+  fetchUser();
+}, []);
+
 
   const handleLogout = async () => {
     await logout();
