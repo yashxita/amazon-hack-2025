@@ -57,6 +57,7 @@ export default function BlendPage() {
   const [loadingBlends, setLoadingBlends] = useState<Record<string, boolean>>(
     {}
   );
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Form inputs
   const [blendName, setBlendName] = useState("");
@@ -72,9 +73,11 @@ export default function BlendPage() {
         const user = await getCurrentUser();
         setCurrentUser(user);
         await fetchBlends();
-      } catch  {
+      } catch {
         setError("Failed to load user info. Please login.");
         toast.error("Please login to access blend functionality.");
+      } finally {
+        setIsInitializing(false); // <-- Mark initialization as done
       }
     };
 
@@ -201,6 +204,16 @@ export default function BlendPage() {
       </div>
     );
   }
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <RefreshCw className="w-8 h-8 animate-spin text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
+          <p className="text-cyan-300 text-sm font-mono">Loading blends...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black p-6">
@@ -217,19 +230,19 @@ export default function BlendPage() {
           </Button>
         </div>
 
-<div className="relative w-full h-[360px]  -mt-30">
-  <div className="absolute inset-0">
-    <FuseMode />
-    <div className="absolute bottom-12 inset-x-0 text-center space-y-2">
-      <p className="text-gray-300 text-xl">
-        Create shared movie recommendations with friends
-      </p>
-      <p className="text-blue-400 text-sm font-mono bg-black/50 border border-blue-500/30 rounded px-3 py-1 inline-block">
-        Welcome back, {currentUser.username}!
-      </p>
-    </div>
-  </div>
-</div>
+        <div className="relative w-full h-[360px]  -mt-30">
+          <div className="absolute inset-0">
+            <FuseMode />
+            <div className="absolute bottom-12 inset-x-0 text-center space-y-2">
+              <p className="text-gray-300 text-xl">
+                Create shared movie recommendations with friends
+              </p>
+              <p className="text-blue-400 text-sm font-mono bg-black/50 border border-blue-500/30 rounded px-3 py-1 inline-block">
+                Welcome back, {currentUser.username}!
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Create and Join Forms */}
         <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -401,17 +414,13 @@ export default function BlendPage() {
                                     recommendations
                                   </Badge>
                                   {details.overall_match_score && (
-                                    <Badge
-                                      className="text-cyan-400 border-cyan-500/50 bg-cyan-500/10 shadow-lg shadow-cyan-500/20"
-                                    >
+                                    <Badge className="text-cyan-400 border-cyan-500/50 bg-cyan-500/10 shadow-lg shadow-cyan-500/20">
                                       {details.overall_match_score} match
                                     </Badge>
                                   )}
                                 </>
                               ) : (
-                                <Badge
-                                  className="text-yellow-400 border-yellow-500/50 bg-yellow-500/10 shadow-lg shadow-yellow-500/20"
-                                >
+                                <Badge className="text-yellow-400 border-yellow-500/50 bg-yellow-500/10 shadow-lg shadow-yellow-500/20">
                                   Waiting for members
                                 </Badge>
                               )}
