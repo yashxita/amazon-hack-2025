@@ -13,12 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Play,
-  Plus,
+
   Star,
-  Volume2,
-  Info,
-  ThumbsUp,
-  Share2,
+
 } from "lucide-react";
 import { Effects } from "./Effects";
 import { addToWatchHistory } from "../../services/api"; // ← added for history
