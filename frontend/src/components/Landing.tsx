@@ -1,96 +1,108 @@
-"use client";
+"use client"
 
-import HeroTV from "./HeroTV";
-import { useEffect, useState, KeyboardEvent } from "react";
-import axios from "axios";
-import { usePathname, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import MoodSelector from "./MoodSelector";
-import RecentlyWatchedSection from "./RecentlyWatchedSection";
-// import TrendingSection from "./TrendingSection";
-import DayRecommendationSection from "./DayRecommendationSection";
-import Blend from "../components/Blend";
-import TopRatedSection from "./TopRatedSection";
-import { logout, markMovieAsWatched } from "../../services/api"; // Adjust the path if needed
-import toast, { Toaster } from "react-hot-toast";
-import { API_BASE_URL } from "../../services/api";
-import { getCurrentUser } from "../../services/api";
+import HeroTV from "./HeroTV"
+import { useEffect, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import MoodSelector from "./MoodSelector"
+import RecentlyWatchedSection from "./RecentlyWatchedSection"
+import DayRecommendationSection from "./DayRecommendationSection"
+import TopRatedSection from "./TopRatedSection"
+import { logout, markMovieAsWatched, getCurrentUser } from "../../services/api"
+import toast, { Toaster } from "react-hot-toast"
+import LandingSearch from "../components/LandingSearch"
+import VoiceRecommendations, { VoiceRecommendation } from "../components/VoiceRecommendations"
 
 interface MovieSearchResult {
-  id: string;
-  title: string;
-  genres?: string[];
-  release_date?: string;
-  poster_path?: string;
-  [key: string]: any;
+  id: string
+  title: string
+  genres?: string[]
+  release_date?: string
+  poster_path?: string
+  score?: number
+  [key: string]: any
 }
 
 export default function Landing() {
-  const [activeTab, setActiveTab] = useState("home");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<MovieSearchResult[]>([]);
-  const pathname = usePathname();
-  const [user, setUser] = useState<{ id: string; username: string } | null>(
-    null
-  );
-  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("home")
+  const [user, setUser] = useState<{ id: string; username: string } | null>(null)
+  const [isAddingToHistory, setIsAddingToHistory] = useState(false)
+  const [addedToHistory, setAddedToHistory] = useState(false)
+  const pathname = usePathname()
+  const router = useRouter()
 
-  const [isAddingToHistory, setIsAddingToHistory] = useState(false);
-  const [addedToHistory, setAddedToHistory] = useState(false);
+  const [voiceRecommendations, setVoiceRecommendations] = useState<VoiceRecommendation[]>([])
+  const [showVoiceRecommendations, setShowVoiceRecommendations] = useState(false)
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const user = await getCurrentUser();
-        setUser(user);
+        const user = await getCurrentUser()
+        setUser(user)
       } catch (err) {
-        console.warn("Not logged in or session expired",err);
-        localStorage.removeItem("token");
+        console.warn("Not logged in or session expired", err)
+        localStorage.removeItem("token")
       }
-    };
-    fetchUser();
-  }, []);
+    }
+    fetchUser()
+  }, [])
 
   const handleLogout = async () => {
-    await logout();
-    setUser(null);
-    toast.success("Log Out Successful");
-  };
+    await logout()
+    setUser(null)
+    toast.success("Log Out Successful")
+  }
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      return toast.error("Please enter a movie title to search");
-    }
+  const handleMovieSelect = async (movie: MovieSearchResult) => {
+    if (isAddingToHistory || addedToHistory) return
+
+    console.log("Adding movie to history:", movie)
+    setIsAddingToHistory(true)
+
     try {
-      const { data } = await axios.get<MovieSearchResult[]>("/search", {
-        baseURL: `${API_BASE_URL}`,
-        params: { title: searchQuery },
-        headers:{
-           "Content-Type": "application/json",
-    "bypass-tunnel-reminder": "true",
-        }
-      });
-      setSearchResults(data);
-      if (data.length === 0) {
-        toast("No movies found", { icon: "🎬" });
-      }
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Search failed");
-    }
-  };
+      await markMovieAsWatched({
+        movie_id: movie.id?.toString() || movie.title,
+        movie_name: movie.title,
+      })
 
-  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSearch();
+      setAddedToHistory(true)
+      toast.success(`"${movie.title}" added to watch history`)
+
+      setTimeout(() => {
+        setAddedToHistory(false)
+      }, 2000)
+    } catch (error) {
+      console.error("Error adding movie to history:", error)
+      toast.error("Failed to mark movie as watched")
+    } finally {
+      setIsAddingToHistory(false)
     }
-  };
+  }
+
+  const handleVoiceResults = (results: MovieSearchResult[]) => {
+    const sanitized: VoiceRecommendation[] = results.map((movie) => ({
+      ...movie,
+      score: movie.score ?? 0,
+      genres: movie.genres ?? [],
+      poster_path: movie.poster_path ?? "/placeholder.svg",
+      release_date: movie.release_date ?? "N/A",
+    }))
+    setVoiceRecommendations(sanitized)
+    setShowVoiceRecommendations(true)
+  }
+
+  const handleCloseVoiceResults = () => {
+    setShowVoiceRecommendations(false)
+    setVoiceRecommendations([])
+  }
+
+  const handleNewVoiceSearch = () => {
+    setShowVoiceRecommendations(false)
+    // The voice search modal will be triggered by the search component
+  }
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Navigation */}
       <Toaster />
       <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
         <div className="container mx-auto px-6 lg:px-12 py-4">
@@ -126,85 +138,15 @@ export default function Landing() {
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Search + Neon Dropdown */}
-              <div className="relative w-64">
-                <Input
-                  placeholder="Search movies..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setSearchResults([]);
-                  }}
-                  onKeyDown={onKeyDown}
-                  className="bg-black border-2 border-gray-700 focus:border-red-500 text-white placeholder-gray-500 pr-12"
-                />
-                <Button
-                  size="icon"
-                  onClick={handleSearch}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-400"
-                >
-                  <Search className="w-4 h-4" />
-                </Button>
-
-                {searchResults.length > 0 && (
-                  <ul className="absolute top-full left-0 w-full mt-1 max-h-60 overflow-y-auto bg-black border border-blue-500 rounded-lg shadow-[0_0_10px_rgba(0,0,255,0.7),0_0_20px_rgba(255,0,0,0.7)] z-50">
-                    {searchResults.map((movie) => {
-                      const handleClick = async () => {
-                        if (isAddingToHistory || addedToHistory) return;
-
-                        console.log("Adding movie to history:", movie);
-                        setIsAddingToHistory(true);
-
-                        try {
-                          await markMovieAsWatched({
-                            movie_id: movie.id?.toString() || movie.title,
-                            movie_name: movie.title,
-                          });
-
-                          setAddedToHistory(true);
-                          toast.success(
-                            `"${movie.title}" added to watch history`
-                          );
-
-                          setTimeout(() => {
-                            setAddedToHistory(false);
-                          }, 2000);
-                        } catch (error) {
-                          console.error("Error adding movie to history:", error);
-                          toast.error("Failed to mark movie as watched");
-                        } finally {
-                          setIsAddingToHistory(false);
-                          setSearchQuery(movie.title);
-                          setSearchResults([]);
-                        }
-                      };
-
-                      return (
-                        <li
-                          key={movie.id}
-                          className="px-4 py-2 hover:bg-gray-800 cursor-pointer text-white transition-shadow duration-200 hover:shadow-[0_0_8px_rgba(255,0,0,0.8),0_0_12px_rgba(0,0,255,0.8)]"
-                          onClick={handleClick}
-                        >
-                          <span className="text-red-400 drop-shadow-[0_0_4px_rgba(255,0,0,0.8)]">
-                            {movie.title}
-                          </span>
-                          {movie.release_date && (
-                            <span className="text-blue-400 text-sm ml-2 drop-shadow-[0_0_4px_rgba(0,0,255,0.8)]">
-                              ({movie.release_date.slice(0, 4)})
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
+              <LandingSearch
+                onMovieSelect={handleMovieSelect}
+                onVoiceResults={handleVoiceResults}
+                className="w-64"
+              />
 
               {user ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-semibold">
-                    {user.username}
-                  </span>
+                  <span className="text-white font-semibold">{user.username}</span>
                   <Button
                     className="border-red-500 text-red-400 bg-black hover:bg-red-100 font-semibold"
                     onClick={handleLogout}
@@ -227,22 +169,25 @@ export default function Landing() {
 
       {/* Main Content */}
       <main className="pt-20 space-y-8">
-        {activeTab === "home" && (
+        <VoiceRecommendations
+          recommendations={voiceRecommendations}
+          onClose={handleCloseVoiceResults}
+          onNewVoiceSearch={handleNewVoiceSearch}
+          isVisible={showVoiceRecommendations}
+        />
+
+        {activeTab === "home" && !showVoiceRecommendations && (
           <div>
             <HeroTV />
-            {/* <Hero /> */}
             <div className="py-16">
               <RecentlyWatchedSection />
               <DayRecommendationSection />
-              {/* <TrendingSection /> */}
               <MoodSelector />
               <TopRatedSection />
             </div>
           </div>
         )}
-
-        {activeTab === "blend" && <Blend />}
       </main>
     </div>
-  );
+  )
 }

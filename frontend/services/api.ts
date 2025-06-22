@@ -621,3 +621,57 @@ export async function searchMovies(title: string): Promise<MovieSearchResult[]> 
     return []
   }
 }
+
+export interface VoiceRecommendation {
+  title: string
+  score: number
+  genres: string[]
+  poster_path: string
+  release_date: string
+}
+
+export interface VoiceSearchResponse {
+  recommendations: VoiceRecommendation[]
+}
+
+export const voiceSearchAPI = {
+  async searchByVoice(audioFile: File, topN = 10): Promise<VoiceSearchResponse> {
+    const formData = new FormData()
+    formData.append("audio", audioFile)
+    formData.append("top_n", topN.toString())
+
+    const token = localStorage.getItem("token")
+    if (!token) {
+      throw new Error("Authentication required")
+    }
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/recommend/voice`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+          "bypass-tunnel-reminder": "true",
+        },
+        timeout: 30000, // 30 second timeout for voice processing
+      })
+
+      return response.data
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        throw new Error("Please login to use voice search")
+      } else if (error.response?.status === 500) {
+        throw new Error("Voice processing failed. Please try again.")
+      } else if (error.code === "ECONNABORTED") {
+        throw new Error("Voice search timed out. Please try with a shorter recording.")
+      }
+      throw new Error(error.response?.data?.detail || "Voice search failed")
+    }
+  },
+
+  async convertToWav(audioBlob: Blob): Promise<File> {
+    // This is a placeholder for audio conversion
+    // In a real implementation, you might want to convert the audio to WAV format
+    // For now, we'll just return the blob as a File
+    return new File([audioBlob], "recording.wav", { type: "audio/wav" })
+  },
+}

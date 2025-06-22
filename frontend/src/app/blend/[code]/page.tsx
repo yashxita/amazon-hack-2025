@@ -168,7 +168,6 @@ export default function BlendDetailPage() {
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button
-            variant="outline"
             size="sm"
             onClick={() => router.push("/blend")}
             className="flex items-center gap-2 text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400 shadow-lg shadow-blue-500/20"
@@ -193,7 +192,6 @@ export default function BlendDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
               size="sm"
               onClick={copyBlendCode}
               className="text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400 shadow-lg shadow-blue-500/20"
@@ -202,7 +200,6 @@ export default function BlendDetailPage() {
               Copy Code
             </Button>
             <Button
-              variant="outline"
               size="sm"
               onClick={handleManualRefresh}
               disabled={refreshing}
@@ -361,14 +358,12 @@ export default function BlendDetailPage() {
                     <div className="flex gap-3 justify-center">
                       <Button
                         onClick={handleAddHistory}
-                        variant="outline"
                         className="text-blue-400 border-blue-500/50 hover:bg-blue-500/10 hover:border-blue-400"
                       >
                         Add Your History
                       </Button>
                       <Button
                         onClick={handleManualRefresh}
-                        variant="outline"
                         className="text-red-400 border-red-500/50 hover:bg-red-500/10 hover:border-red-400"
                       >
                         Refresh Blend
