@@ -364,15 +364,24 @@ export async function getWatchHistory(): Promise<WatchHistoryItem[]> {
   try {
     const response = await apiClient.get("/history")
 
-    // Ensure the response is always an array
-    return Array.isArray(response.data)
-      ? response.data
-      : response.data.records || []
+    const data = response.data
+
+    // DEBUG: Uncomment to inspect shape
+    // console.log("Watch history response:", data)
+
+    if (Array.isArray(data)) {
+      return data
+    } else if (Array.isArray(data.records)) {
+      return data.records
+    } else {
+      throw new Error("Invalid watch history format")
+    }
   } catch (error: any) {
     console.error("Failed to get watch history:", error.response?.data || error.message)
     return []
   }
 }
+
 
 
 // Bulk add movies to watch history (for migration purposes)
