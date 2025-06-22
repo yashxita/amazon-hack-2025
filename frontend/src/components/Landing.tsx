@@ -15,7 +15,7 @@ import Blend from "../components/Blend";
 import TopRatedSection from "./TopRatedSection";
 import { logout } from "../../services/api"; // Adjust the path if needed
 import toast, { Toaster } from "react-hot-toast";
-
+import { API_BASE_URL } from "../../services/api";
 interface MovieSearchResult {
   id: string;
   title: string;
@@ -41,7 +41,7 @@ export default function Landing() {
         const token = localStorage.getItem("token");
         if (!token) return;
         const response = await axios.get("/me", {
-          baseURL: "http://127.0.0.1:8000",
+          baseURL: `${API_BASE_URL}`,
           headers: {
             Authorization: `Bearer ${token}`,
           },
