@@ -1,8 +1,7 @@
 "use client"
 import {
   getWatchlistDetail,
-  addToWatchHistory,
-  removeMovieFromWatchlist
+
 } from "../../../../services/api"
 
 
