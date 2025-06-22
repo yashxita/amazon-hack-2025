@@ -1,4 +1,5 @@
 import axios from "axios"
+export const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://c9e2-49-37-101-221.ngrok-free.app"
 
 // ============================================================================
 // MOVIE RECOMMENDATION INTERFACES & FUNCTIONS
@@ -37,10 +38,11 @@ export async function getRecommendations(mood: string): Promise<RecommendationRe
   }
 
   try {
-    const response = await axios.post<RecommendationResponse>("http://localhost:8000/recommend", requestBody, {
+    const response = await axios.post<RecommendationResponse>(`${API_BASE_URL}/recommend`, requestBody, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+    "bypass-tunnel-reminder": "true",
       },
     })
     return response.data.recommendations
@@ -55,12 +57,13 @@ export async function getHistoryBasedRecommendations(top_n = 20): Promise<Histor
 
   try {
     const response = await axios.post<HistoryRecommendationResponse>(
-      "http://localhost:8000/recommend/history",
+      `${API_BASE_URL}/recommend/history`,
       { top_n },
       {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+    "bypass-tunnel-reminder": "true",
         },
       },
     )
@@ -104,12 +107,15 @@ export interface ApiError {
 }
 
 // Create axios instance with base configuration
+// Create axios instance with base configuration
 const apiClient = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: `${API_BASE_URL}`,
   headers: {
     "Content-Type": "application/json",
+    "bypass-tunnel-reminder": "true",
   },
 })
+
 
 // Add request interceptor to include auth token
 apiClient.interceptors.request.use(
@@ -118,6 +124,7 @@ apiClient.interceptors.request.use(
       const token = localStorage.getItem("token")
       if (token) {
         config.headers.Authorization = `Bearer ${token}`
+        
       }
     }
     return config
@@ -369,6 +376,9 @@ export async function getWatchHistory(): Promise<WatchHistoryItem[]> {
   }
 }
 
+
+
+
 // Bulk add movies to watch history (for migration purposes)
 export async function bulkAddToWatchHistory(movies: AddToHistoryRequest[]): Promise<void> {
   try {
@@ -416,15 +426,27 @@ export interface AddMovieToWatchlistRequest {
 }
 
 // Create a new watchlist
-export async function createWatchlist(watchlist: CreateWatchlistRequest): Promise<WatchlistGroup> {
+export async function createWatchlistWithImage(name: string, coverImage?: File): Promise<WatchlistGroup> {
   try {
-    const response = await apiClient.post<WatchlistGroup>("/watchlists", watchlist)
+    const formData = new FormData()
+    formData.append("name", name)
+    if (coverImage) {
+      formData.append("cover_image", coverImage)
+    }
+
+    const response = await apiClient.post<WatchlistGroup>("/watchlists", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
+
     return response.data
   } catch (error: any) {
-    console.error("Failed to create watchlist:", error.response?.data || error.message)
+    console.error("Failed to create watchlist with image:", error.response?.data || error.message)
     throw new Error("Failed to create watchlist")
   }
 }
+
 
 // Get all user's watchlists
 export async function getWatchlists(): Promise<WatchlistGroup[]> {

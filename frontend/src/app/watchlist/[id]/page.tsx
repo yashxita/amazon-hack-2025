@@ -1,4 +1,10 @@
 "use client"
+import {
+  getWatchlistDetail,
+  addToWatchHistory,
+  removeMovieFromWatchlist
+} from "../../../../services/api"
+
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -33,30 +39,18 @@ export default function WatchlistDetailPage() {
     }
   }, [id])
 
-  const fetchWatchlistDetail = async () => {
-    try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        router.push("/login")
-        return
-      }
-
-      const response = await fetch(`http://localhost:8000/watchlists/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setWatchlist(data)
-      }
-    } catch (error) {
-      console.error("Error fetching watchlist detail:", error)
-    } finally {
-      setLoading(false)
-    }
+const fetchWatchlistDetail = async () => {
+  const token = localStorage.getItem("token")
+  if (!token) {
+    router.push("/login")
+    return
   }
+
+  const data = await getWatchlistDetail(id)
+  setWatchlist(data)
+  setLoading(false)
+}
+
 
   // const removeMovie = async (movieId: string) => {
   //   try {

@@ -15,6 +15,8 @@ import Blend from "../components/Blend";
 import TopRatedSection from "./TopRatedSection";
 import { logout, markMovieAsWatched } from "../../services/api"; // Adjust the path if needed
 import toast, { Toaster } from "react-hot-toast";
+import { API_BASE_URL } from "../../services/api";
+import { getCurrentUser } from "../../services/api";
 
 interface MovieSearchResult {
   id: string;
@@ -41,17 +43,10 @@ export default function Landing() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-        const response = await axios.get("/me", {
-          baseURL: "http://127.0.0.1:8000",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setUser(response.data);
-      } catch {
-        console.warn("Not logged in or session expired");
+        const user = await getCurrentUser();
+        setUser(user);
+      } catch (err) {
+        console.warn("Not logged in or session expired",err);
         localStorage.removeItem("token");
       }
     };
@@ -70,8 +65,12 @@ export default function Landing() {
     }
     try {
       const { data } = await axios.get<MovieSearchResult[]>("/search", {
-        baseURL: "http://127.0.0.1:8000",
+        baseURL: `${API_BASE_URL}`,
         params: { title: searchQuery },
+        headers:{
+           "Content-Type": "application/json",
+    "bypass-tunnel-reminder": "true",
+        }
       });
       setSearchResults(data);
       if (data.length === 0) {

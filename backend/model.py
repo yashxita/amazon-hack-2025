@@ -16,9 +16,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 import os
 import ssl
 import certifi
-import pyaudio
-import wave
-import threading
 import whisper
 import re
 
@@ -458,44 +455,8 @@ user_history = [
     "Interstellar"
 ]
 
-def record_until_enter(output_filename="output.wav", sample_rate=44100, channels=1):
-    chunk_size = 1024
-    audio_format = pyaudio.paInt16
-    frames = []
-    recording = True
-
-    def record_thread():
-        nonlocal recording
-        p = pyaudio.PyAudio()
-        stream = p.open(format=audio_format,
-                        channels=channels,
-                        rate=sample_rate,
-                        input=True,
-                        frames_per_buffer=chunk_size)
-        print("Recording... Press Enter to stop.")
-        while recording:
-            data = stream.read(chunk_size)
-            frames.append(data)
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-
-    t = threading.Thread(target=record_thread)
-    t.start()
-    input()  # Wait for Enter key
-    recording = False
-    t.join()
-
-    wf = wave.open(output_filename, 'wb')
-    wf.setnchannels(channels)
-    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(audio_format))
-    wf.setframerate(sample_rate)
-    wf.writeframes(b''.join(frames))
-    wf.close()
-    print("Recording stopped and saved to", output_filename)
-
 def transcribe_voice(audio_path):
-    model = whisper.load_model("medium")
+    model = whisper.load_model("tiny")
     result = model.transcribe(audio_path)
     return result['text']
 

@@ -1,5 +1,5 @@
 "use client";
-
+import { API_BASE_URL } from "../../../services/api";
 import type React from "react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -83,11 +83,12 @@ export default function CreateWatchlistPage() {
 
       const history = JSON.parse(localHistory);
       for (const movie of history) {
-        await fetch("http://localhost:8000/history/add", {
+        await fetch(`${API_BASE_URL}/history/add`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
+            "bypass-tunnel-reminder": "true",
           },
           body: JSON.stringify({
             movie_id: movie.movie_id || movie.id || "unknown",
@@ -114,11 +115,12 @@ export default function CreateWatchlistPage() {
       const token = localStorage.getItem("token");
       if (!token) return router.push("/login");
 
-      const response = await fetch("http://localhost:8000/recommend/history", {
+      const response = await fetch(`${API_BASE_URL}/recommend/history`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          "bypass-tunnel-reminder": "true",
         },
         body: JSON.stringify({ top_n: 20 }),
       });
