@@ -1,5 +1,6 @@
 "use client";
 
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 import type React from "react";
 
 import { useState, useEffect } from "react";
@@ -100,7 +101,7 @@ export default function CreateWatchlistPage() {
 
       // Send each movie in history to the backend
       for (const movie of history) {
-        await fetch("http://localhost:8000/history/add", {
+        await fetch(`${API_BASE_URL}/history/add`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -138,7 +139,7 @@ export default function CreateWatchlistPage() {
         return;
       }
 
-      const response = await fetch("http://localhost:8000/recommend/history", {
+      const response = await fetch(`${API_BASE_URL}/recommend/history`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -216,7 +217,7 @@ export default function CreateWatchlistPage() {
 
       // Create watchlist group
       const watchlistResponse = await fetch(
-        "http://localhost:8000/watchlists",
+        `${API_BASE_URL}/watchlists`,
         {
           method: "POST",
           headers: {
@@ -240,7 +241,7 @@ export default function CreateWatchlistPage() {
       // Add movies to watchlist
       for (const movie of selectedMovies) {
         const movieResponse = await fetch(
-          `http://localhost:8000/watchlists/${watchlistId}/movies`,
+          `${API_BASE_URL}/${watchlistId}/movies`,
           {
             method: "POST",
             headers: {
