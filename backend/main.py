@@ -97,6 +97,9 @@ class MovieRecommendation(BaseModel):
     poster_path: str
     release_date: str
 
+class MovieRecommendationbyHistory(MovieRecommendation):
+    overview: str
+
 class RecommendationResponse(BaseModel):
     recommendations: List[MovieRecommendation]
 
@@ -104,7 +107,7 @@ class HistoryRecommendationRequest(BaseModel):
     top_n: int = 10
 
 class HistoryRecommendationResponse(BaseModel):
-    recommendations: List[MovieRecommendation]
+    recommendations: List[MovieRecommendationbyHistory]
     overall_match_score: str
 
 class VoiceRecommendationRequest(BaseModel):
@@ -367,11 +370,16 @@ async def recommend_by_history(request: HistoryRecommendationRequest, user=Depen
                     "score": r["match_score"],
                     "genres": r["genres"],
                     "poster_path": r["poster_path"],
-                    "release_date": r["release_date"]
+                    "release_date": r["release_date"],
+                    "overview": (
+                        movies[movies['title'] == r["title"]]["overview"].iloc[0]
+                        if not movies[movies['title'] == r["title"]].empty else ""
+                    )
                 } for r in recommendations
             ],
             "overall_match_score": overall_match_score
         }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
