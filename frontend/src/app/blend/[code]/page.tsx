@@ -216,29 +216,6 @@ export default function BlendDetailPage() {
           </div>
         </div>
 
-        {/* Add History Button */}
-        <div className="mb-8">
-          <Card className="bg-black border-2 border-blue-500/50 shadow-2xl shadow-blue-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-blue-400 font-semibold drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]">
-                    Need better recommendations?
-                  </h3>
-                  <p className="text-gray-300 text-sm">
-                    Add your movie history to improve blend results
-                  </p>
-                </div>
-                <Button
-                  onClick={handleAddHistory}
-                  className="bg-blue-500 hover:bg-blue-600 border border-blue-400 shadow-lg shadow-blue-500/30 text-white font-bold"
-                >
-                  Add History
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Members Panel */}
