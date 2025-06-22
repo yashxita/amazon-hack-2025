@@ -110,12 +110,12 @@ function CurvedTV() {
     groupRef.current.rotation.x = THREE.MathUtils.lerp(
       groupRef.current.rotation.x,
       -pointer.y * 0.3,
-      0.05
+      0.02
     );
     groupRef.current.rotation.y = THREE.MathUtils.lerp(
       groupRef.current.rotation.y,
       pointer.x * 0.5,
-      0.01
+      0.003
     );
   });
 
@@ -127,7 +127,7 @@ function CurvedTV() {
         speed={1}
         floatingRange={[-0.2, 0.2]}
       >
-        <Model scale={4} position={[34, -7, 20]} />
+        <Model scale={4} position={[34, -10, 20]} />
       </Float>
     </group>
   );
