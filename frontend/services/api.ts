@@ -1,5 +1,5 @@
 import axios from "axios"
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://c9e2-49-37-101-221.ngrok-free.app"
+export const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://c9e2-49-37-101-221.ngrok-free.app"
 
 // ============================================================================
 // MOVIE RECOMMENDATION INTERFACES & FUNCTIONS
@@ -362,23 +362,14 @@ export async function addToWatchHistory(movie: AddToHistoryRequest): Promise<voi
 // Get user's watch history from database
 export async function getWatchHistory(): Promise<WatchHistoryItem[]> {
   try {
-    const response = await apiClient.get("/history")
-    const data = response.data
-
-    console.log("Watch history API response:", data) // 👈 ADD THIS
-
-    if (Array.isArray(data)) {
-      return data
-    } else if (Array.isArray(data.records)) {
-      return data.records
-    } else {
-      throw new Error("Invalid watch history format")
-    }
+    const response = await apiClient.get<WatchHistoryItem[]>("/history")
+    return response.data
   } catch (error: any) {
     console.error("Failed to get watch history:", error.response?.data || error.message)
     return []
   }
 }
+
 
 
 
