@@ -1,4 +1,5 @@
 "use client"
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -40,7 +41,7 @@ export default function WatchlistDetailPage() {
         return
       }
 
-      const response = await fetch(`http://localhost:8000/watchlists/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/watchlists/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -60,7 +61,7 @@ export default function WatchlistDetailPage() {
   const removeMovie = async (movieId: string) => {
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`http://localhost:8000/watchlists/${id}/movies/${movieId}`, {
+      const response = await fetch(`${API_BASE_URL}/watchlists/${id}/movies/${movieId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -85,7 +86,7 @@ export default function WatchlistDetailPage() {
   const addToWatchHistory = async (movie: WatchlistMovie) => {
     try {
       const token = localStorage.getItem("token")
-      await fetch("http://localhost:8000/history/add", {
+      await fetch(`${API_BASE_URL}/history/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
