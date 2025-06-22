@@ -363,11 +363,9 @@ export async function addToWatchHistory(movie: AddToHistoryRequest): Promise<voi
 export async function getWatchHistory(): Promise<WatchHistoryItem[]> {
   try {
     const response = await apiClient.get("/history")
-
     const data = response.data
 
-    // DEBUG: Uncomment to inspect shape
-    // console.log("Watch history response:", data)
+    console.log("Watch history API response:", data) // 👈 ADD THIS
 
     if (Array.isArray(data)) {
       return data
