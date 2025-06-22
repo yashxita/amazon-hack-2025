@@ -1,5 +1,5 @@
 "use client"
-
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -30,7 +30,7 @@ export default function Watchlist() {
         return
       }
 
-      const response = await fetch("http://localhost:8000/watchlists", {
+      const response = await fetch(`${API_BASE_URL}/watchlists`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -50,7 +50,7 @@ export default function Watchlist() {
   const deleteWatchlist = async (watchlistId: string) => {
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`http://localhost:8000/watchlists/${watchlistId}`, {
+      const response = await fetch(`${API_BASE_URL}/watchlists/${watchlistId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
