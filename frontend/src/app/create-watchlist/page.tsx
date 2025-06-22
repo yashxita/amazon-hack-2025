@@ -105,6 +105,7 @@ export default function CreateWatchlistPage() {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
+            "bypass-tunnel-reminder": "true",
           },
           body: JSON.stringify({
             movie_id: movie.movie_id || movie.id || "unknown",
@@ -143,6 +144,7 @@ export default function CreateWatchlistPage() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          "bypass-tunnel-reminder": "true",
         },
         body: JSON.stringify({
           top_n: 20,
@@ -215,16 +217,14 @@ export default function CreateWatchlistPage() {
       }
 
       // Create watchlist group
-      const watchlistResponse = await fetch(
-        `${API_BASE_URL}/watchlists`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
+      const watchlistResponse = await fetch(`${API_BASE_URL}/watchlists`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "bypass-tunnel-reminder": "true",
+        },
+        body: formData,
+      });
 
       if (!watchlistResponse.ok) {
         const errorText = await watchlistResponse.text();
@@ -246,6 +246,7 @@ export default function CreateWatchlistPage() {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
+              "bypass-tunnel-reminder": "true",
             },
             body: JSON.stringify(movie),
           }
@@ -296,7 +297,6 @@ export default function CreateWatchlistPage() {
         <div className="flex items-center mb-8">
           <Button
             onClick={() => router.back()}
-            
             className="text-white hover:bg-gray-800 mr-4"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
@@ -401,9 +401,7 @@ export default function CreateWatchlistPage() {
                         Watch History
                       </Label>
                       {localHistoryCount > 0 && (
-                        <Badge
-                          className="text-xs border-yellow-600 text-yellow-400"
-                        >
+                        <Badge className="text-xs border-yellow-600 text-yellow-400">
                           {localHistoryCount} local
                         </Badge>
                       )}
@@ -413,7 +411,6 @@ export default function CreateWatchlistPage() {
                       <Button
                         onClick={syncUserHistory}
                         disabled={syncing}
-                        
                         className="w-full mb-3 bg-blue-900 text-blue-400 border-blue-600 hover:bg-blue-800"
                       >
                         <Sync
@@ -460,7 +457,6 @@ export default function CreateWatchlistPage() {
               </h2>
               <Button
                 onClick={fetchHistoryBasedRecommendations}
-                
                 size="sm"
                 className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
               >
@@ -490,8 +486,8 @@ export default function CreateWatchlistPage() {
                     </p>
                   ) : (
                     <p className="text-gray-500 text-sm">
-                      Start watching movies and they`&apos;`ll appear in your history
-                      for better recommendations.
+                      Start watching movies and they`&apos;`ll appear in your
+                      history for better recommendations.
                     </p>
                   )}
                 </CardContent>
@@ -568,7 +564,6 @@ export default function CreateWatchlistPage() {
                               .map((genre, genreIndex) => (
                                 <Badge
                                   key={`${genre}-${genreIndex}`}
-                                  
                                   className="text-xs border-gray-600 text-gray-300"
                                 >
                                   {genre}

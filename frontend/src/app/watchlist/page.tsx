@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Plus, Trash2, ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
-
+import { getWatchlists } from "../../../services/api"
 interface Watchlist {
   id: string
   name: string
@@ -22,30 +22,23 @@ export default function Watchlist() {
     fetchWatchlists()
   }, [])
 
-  const fetchWatchlists = async () => {
-    try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        router.push("/login")
-        return
-      }
-
-      const response = await fetch(`${API_BASE_URL}/watchlists`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setWatchlists(data)
-      }
-    } catch (error) {
-      console.error("Error fetching watchlists:", error)
-    } finally {
-      setLoading(false)
+const fetchWatchlists = async () => {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      router.push("/login")
+      return
     }
+
+    const data = await getWatchlists()
+    setWatchlists(data)
+  } catch (error) {
+    console.error("Error fetching watchlists:", error)
+  } finally {
+    setLoading(false)
   }
+}
+
 
   const deleteWatchlist = async (watchlistId: string) => {
     try {
@@ -54,6 +47,8 @@ export default function Watchlist() {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
+           "Content-Type": "application/json",
+    "bypass-tunnel-reminder": "true",
         },
       })
 

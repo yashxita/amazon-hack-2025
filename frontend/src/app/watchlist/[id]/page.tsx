@@ -1,5 +1,10 @@
 "use client"
-import { API_BASE_URL } from "../../../../services/api"
+import {
+  getWatchlistDetail,
+  addToWatchHistory,
+  removeMovieFromWatchlist
+} from "../../../../services/api"
+
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -33,75 +38,47 @@ export default function WatchlistDetailPage() {
     }
   }, [id])
 
-  const fetchWatchlistDetail = async () => {
-    try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        router.push("/login")
-        return
-      }
-
-      const response = await fetch(`${API_BASE_URL}/watchlists/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setWatchlist(data)
-      }
-    } catch (error) {
-      console.error("Error fetching watchlist detail:", error)
-    } finally {
-      setLoading(false)
-    }
+const fetchWatchlistDetail = async () => {
+  const token = localStorage.getItem("token")
+  if (!token) {
+    router.push("/login")
+    return
   }
 
-  const removeMovie = async (movieId: string) => {
-    try {
-      const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}/watchlists/${id}/movies/${movieId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+  const data = await getWatchlistDetail(id)
+  setWatchlist(data)
+  setLoading(false)
+}
 
-      if (response.ok) {
-        setWatchlist((prev) =>
-          prev
-            ? {
-                ...prev,
-                movies: prev.movies.filter((m) => m.movie_id !== movieId),
-              }
-            : null,
-        )
-      }
-    } catch (error) {
-      console.error("Error removing movie:", error)
-    }
-  }
 
-  const addToWatchHistory = async (movie: WatchlistMovie) => {
-    try {
-      const token = localStorage.getItem("token")
-      await fetch(`${API_BASE_URL}/history/add`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          movie_id: movie.movie_id,
-          movie_name: movie.movie_name,
-        }),
-      })
-      alert(`Added "${movie.movie_name}" to watch history!`)
-    } catch (error) {
-      console.error("Error adding to watch history:", error)
-    }
+const removeMovie = async (movieId: string) => {
+  try {
+    await removeMovieFromWatchlist(id, movieId)
+    setWatchlist((prev) =>
+      prev
+        ? {
+            ...prev,
+            movies: prev.movies.filter((m) => m.movie_id !== movieId),
+          }
+        : null,
+    )
+  } catch (error) {
+    console.error("Error removing movie:", error)
   }
+}
+
+
+const handleAddToWatchHistory = async (movie: WatchlistMovie) => {
+  try {
+    await addToWatchHistory({
+      movie_id: movie.movie_id,
+      movie_name: movie.movie_name,
+    })
+    alert(`Added "${movie.movie_name}" to watch history!`)
+  } catch (error) {
+    console.error("Error adding to watch history:", error)
+  }
+}
 
   const getMoviePosterUrl = (posterPath?: string) => {
     if (!posterPath) return null
@@ -183,7 +160,7 @@ export default function WatchlistDetailPage() {
                   <h3 className="text-white font-bold text-sm mb-4 line-clamp-2">{movie.movie_name}</h3>
                   <div className="flex flex-col gap-2">
                     <Button
-                      onClick={() => addToWatchHistory(movie)}
+                      onClick={() => handleAddToWatchHistory(movie)}
                       size="sm"
                       className="bg-green-900 text-green-400 border-green-600 hover:bg-green-800 text-xs"
                     >

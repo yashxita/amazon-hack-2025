@@ -42,6 +42,7 @@ export async function getRecommendations(mood: string): Promise<RecommendationRe
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+    "bypass-tunnel-reminder": "true",
       },
     })
     return response.data.recommendations
@@ -62,6 +63,7 @@ export async function getHistoryBasedRecommendations(top_n = 20): Promise<Histor
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+    "bypass-tunnel-reminder": "true",
         },
       },
     )
@@ -424,15 +426,27 @@ export interface AddMovieToWatchlistRequest {
 }
 
 // Create a new watchlist
-export async function createWatchlist(watchlist: CreateWatchlistRequest): Promise<WatchlistGroup> {
+export async function createWatchlistWithImage(name: string, coverImage?: File): Promise<WatchlistGroup> {
   try {
-    const response = await apiClient.post<WatchlistGroup>("/watchlists", watchlist)
+    const formData = new FormData()
+    formData.append("name", name)
+    if (coverImage) {
+      formData.append("cover_image", coverImage)
+    }
+
+    const response = await apiClient.post<WatchlistGroup>("/watchlists", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
+
     return response.data
   } catch (error: any) {
-    console.error("Failed to create watchlist:", error.response?.data || error.message)
+    console.error("Failed to create watchlist with image:", error.response?.data || error.message)
     throw new Error("Failed to create watchlist")
   }
 }
+
 
 // Get all user's watchlists
 export async function getWatchlists(): Promise<WatchlistGroup[]> {
