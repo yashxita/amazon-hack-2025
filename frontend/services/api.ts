@@ -1,4 +1,5 @@
 import axios from "axios"
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
 // ============================================================================
 // MOVIE RECOMMENDATION INTERFACES & FUNCTIONS
@@ -37,7 +38,7 @@ export async function getRecommendations(mood: string): Promise<RecommendationRe
   }
 
   try {
-    const response = await axios.post<RecommendationResponse>("http://localhost:8000/recommend", requestBody, {
+    const response = await axios.post<RecommendationResponse>(`${API_BASE_URL}/recommend`, requestBody, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
@@ -55,7 +56,7 @@ export async function getHistoryBasedRecommendations(top_n = 20): Promise<Histor
 
   try {
     const response = await axios.post<HistoryRecommendationResponse>(
-      "http://localhost:8000/recommend/history",
+      `${API_BASE_URL}/recommend/history`,
       { top_n },
       {
         headers: {
@@ -105,7 +106,7 @@ export interface ApiError {
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: `${API_BASE_URL}`,
   headers: {
     "Content-Type": "application/json",
   },
