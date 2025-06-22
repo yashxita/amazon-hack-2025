@@ -64,6 +64,10 @@ export default function Landing() {
       const { data } = await axios.get<MovieSearchResult[]>("/search", {
         baseURL: `${API_BASE_URL}`,
         params: { title: searchQuery },
+        headers:{
+           "Content-Type": "application/json",
+    "bypass-tunnel-reminder": "true",
+        }
       });
       setSearchResults(data);
       if (data.length === 0) {
