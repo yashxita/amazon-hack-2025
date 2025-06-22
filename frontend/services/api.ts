@@ -111,7 +111,6 @@ const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
     "bypass-tunnel-reminder": "true",
-    "User-Agent": "NonBrowser/1.0",
   },
 })
 
