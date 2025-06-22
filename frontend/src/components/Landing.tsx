@@ -6,14 +6,14 @@ import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from 'lucide-react';
+import { Search } from "lucide-react";
 import MoodSelector from "./MoodSelector";
 import RecentlyWatchedSection from "./RecentlyWatchedSection";
 // import TrendingSection from "./TrendingSection";
 import DayRecommendationSection from "./DayRecommendationSection";
 import Blend from "../components/Blend";
 import TopRatedSection from "./TopRatedSection";
-import { logout } from "../../services/api"; // Adjust the path if needed
+import { logout, markMovieAsWatched } from "../../services/api"; // Adjust the path if needed
 import toast, { Toaster } from "react-hot-toast";
 
 interface MovieSearchResult {
@@ -34,6 +34,9 @@ export default function Landing() {
     null
   );
   const router = useRouter();
+
+  const [isAddingToHistory, setIsAddingToHistory] = useState(false);
+  const [addedToHistory, setAddedToHistory] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -72,7 +75,7 @@ export default function Landing() {
       });
       setSearchResults(data);
       if (data.length === 0) {
-        toast("No movies found", { icon: '🎬' });
+        toast("No movies found", { icon: "🎬" });
       }
     } catch (err: any) {
       console.error(err);
@@ -146,25 +149,54 @@ export default function Landing() {
 
                 {searchResults.length > 0 && (
                   <ul className="absolute top-full left-0 w-full mt-1 max-h-60 overflow-y-auto bg-black border border-blue-500 rounded-lg shadow-[0_0_10px_rgba(0,0,255,0.7),0_0_20px_rgba(255,0,0,0.7)] z-50">
-                    {searchResults.map((movie) => (
-                      <li
-                        key={movie.id}
-                        className="px-4 py-2 hover:bg-gray-800 cursor-pointer text-white transition-shadow duration-200 hover:shadow-[0_0_8px_rgba(255,0,0,0.8),0_0_12px_rgba(0,0,255,0.8)]"
-                        onClick={() => {
+                    {searchResults.map((movie) => {
+                      const handleClick = async () => {
+                        if (isAddingToHistory || addedToHistory) return;
+
+                        console.log("Adding movie to history:", movie);
+                        setIsAddingToHistory(true);
+
+                        try {
+                          await markMovieAsWatched({
+                            movie_id: movie.id?.toString() || movie.title,
+                            movie_name: movie.title,
+                          });
+
+                          setAddedToHistory(true);
+                          toast.success(
+                            `"${movie.title}" added to watch history`
+                          );
+
+                          setTimeout(() => {
+                            setAddedToHistory(false);
+                          }, 2000);
+                        } catch (error) {
+                          console.error("Error adding movie to history:", error);
+                          toast.error("Failed to mark movie as watched");
+                        } finally {
+                          setIsAddingToHistory(false);
                           setSearchQuery(movie.title);
                           setSearchResults([]);
-                        }}
-                      >
-                        <span className="text-red-400 drop-shadow-[0_0_4px_rgba(255,0,0,0.8)]">
-                          {movie.title}
-                        </span>
-                        {movie.release_date && (
-                          <span className="text-blue-400 text-sm ml-2 drop-shadow-[0_0_4px_rgba(0,0,255,0.8)]">
-                            ({movie.release_date.slice(0, 4)})
+                        }
+                      };
+
+                      return (
+                        <li
+                          key={movie.id}
+                          className="px-4 py-2 hover:bg-gray-800 cursor-pointer text-white transition-shadow duration-200 hover:shadow-[0_0_8px_rgba(255,0,0,0.8),0_0_12px_rgba(0,0,255,0.8)]"
+                          onClick={handleClick}
+                        >
+                          <span className="text-red-400 drop-shadow-[0_0_4px_rgba(255,0,0,0.8)]">
+                            {movie.title}
                           </span>
-                        )}
-                      </li>
-                    ))}
+                          {movie.release_date && (
+                            <span className="text-blue-400 text-sm ml-2 drop-shadow-[0_0_4px_rgba(0,0,255,0.8)]">
+                              ({movie.release_date.slice(0, 4)})
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>

@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowLeft, Trash2, Play } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
+import MovieCard from "@/components/MovieCard" // Adjust path if needed
 
 interface WatchlistMovie {
   id: string
@@ -57,50 +58,31 @@ export default function WatchlistDetailPage() {
     }
   }
 
-  const removeMovie = async (movieId: string) => {
-    try {
-      const token = localStorage.getItem("token")
-      const response = await fetch(`http://localhost:8000/watchlists/${id}/movies/${movieId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+  // const removeMovie = async (movieId: string) => {
+  //   try {
+  //     const token = localStorage.getItem("token")
+  //     const response = await fetch(`http://localhost:8000/watchlists/${id}/movies/${movieId}`, {
+  //       method: "DELETE",
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     })
 
-      if (response.ok) {
-        setWatchlist((prev) =>
-          prev
-            ? {
-                ...prev,
-                movies: prev.movies.filter((m) => m.movie_id !== movieId),
-              }
-            : null,
-        )
-      }
-    } catch (error) {
-      console.error("Error removing movie:", error)
-    }
-  }
-
-  const addToWatchHistory = async (movie: WatchlistMovie) => {
-    try {
-      const token = localStorage.getItem("token")
-      await fetch("http://localhost:8000/history/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          movie_id: movie.movie_id,
-          movie_name: movie.movie_name,
-        }),
-      })
-      alert(`Added "${movie.movie_name}" to watch history!`)
-    } catch (error) {
-      console.error("Error adding to watch history:", error)
-    }
-  }
+  //     if (response.ok) {
+  //       setWatchlist((prev) =>
+  //         prev
+  //           ? {
+  
+  //               ...prev,
+  //               movies: prev.movies.filter((m) => m.movie_id !== movieId),
+  //             }
+  //           : null
+  //       )
+  //     }
+  //   } catch (error) {
+  //     console.error("Error removing movie:", error)
+  //   }
+  // }
 
   const getMoviePosterUrl = (posterPath?: string) => {
     if (!posterPath) return null
@@ -155,49 +137,17 @@ export default function WatchlistDetailPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {watchlist.movies.map((movie) => (
-              <Card
+              <MovieCard
                 key={movie.id}
-                className="bg-gray-900 border-gray-700 hover:border-red-500 transition-all duration-300"
-              >
-                <CardContent className="p-4">
-                  <div className="aspect-[2/3] bg-gray-800 rounded-lg mb-4 flex items-center justify-center overflow-hidden relative">
-                    {getMoviePosterUrl(movie.poster_path) ? (
-                      <img
-                        src={getMoviePosterUrl(movie.poster_path)!}
-                        alt={`${movie.movie_name} poster`}
-                        className="object-fit"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.style.display = "none"
-                          target.nextElementSibling?.classList.remove("hidden")
-                        }}
-                      />
-                    ) : null}
-                    <div
-                      className={`${getMoviePosterUrl(movie.poster_path) ? "hidden" : "flex"} items-center justify-center w-full h-full`}
-                    >
-                      <Play className="w-12 h-12 text-gray-600" />
-                    </div>
-                  </div>
-                  <h3 className="text-white font-bold text-sm mb-4 line-clamp-2">{movie.movie_name}</h3>
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      onClick={() => addToWatchHistory(movie)}
-                      size="sm"
-                      className="bg-green-900 text-green-400 border-green-600 hover:bg-green-800 text-xs"
-                    >
-                      Mark Watched
-                    </Button>
-                    <Button
-                      onClick={() => removeMovie(movie.movie_id)}
-                      size="sm"
-                      className="bg-red-900 text-red-400 border-red-600 hover:bg-red-800"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                movie={{
+                  id: movie.movie_id,
+                  title: movie.movie_name,
+                  poster: getMoviePosterUrl(movie.poster_path),
+                  year: "", // Optional: populate if available
+                  genre: [], // Optional: populate if available
+                  score: "", // Optional: populate if available
+                }}
+              />
             ))}
           </div>
         )}
