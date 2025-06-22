@@ -362,13 +362,18 @@ export async function addToWatchHistory(movie: AddToHistoryRequest): Promise<voi
 // Get user's watch history from database
 export async function getWatchHistory(): Promise<WatchHistoryItem[]> {
   try {
-    const response = await apiClient.get<WatchHistoryItem[]>("/history")
-    return response.data
+    const response = await apiClient.get("/history")
+
+    // Ensure the response is always an array
+    return Array.isArray(response.data)
+      ? response.data
+      : response.data.records || []
   } catch (error: any) {
     console.error("Failed to get watch history:", error.response?.data || error.message)
     return []
   }
 }
+
 
 // Bulk add movies to watch history (for migration purposes)
 export async function bulkAddToWatchHistory(movies: AddToHistoryRequest[]): Promise<void> {
